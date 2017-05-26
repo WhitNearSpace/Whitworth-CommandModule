@@ -18,9 +18,8 @@ public:
   *
   * @param tx_pin Serial TX pin
   * @param rx_pin Serial RX pin
-  * @param ri_pin DigitalIN for ring indicator (SBD incoming notice)
   */
-  NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin);
+  NAL9602(PinName tx_pin, PinName rx_pin);
 
   ~NAL9602();
 
@@ -88,7 +87,6 @@ int checkRingAlert();
 
 private:
   Serial modem;
-  DigitalIn _ri;
 
 
 
