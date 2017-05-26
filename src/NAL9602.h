@@ -14,21 +14,41 @@
 class NAL9602 {
 
 public:
-  NAL9602(PinName tx, PinName rx);
-
-  /** Turn on/off Iridium transceiver
+  /** Create a NAL9602 interface object connected to the specified pins
+  *
+  * @param tx_pin Serial TX pin
+  * @param rx_pin Serial RX pin
+  * @param ri_pin DigitalIN for ring indicator (SBD incoming notice)
   */
-  void satLinkOn(bool turnOn);
+  NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin);
+
+  ~NAL9602();
+
+  /** Turn on Iridium transceiver
+  */
+  void satLinkOn();
+
+  /** Turn off Iridium transceiver
+  */
+  void satLinkOff();
+
+  /** Turn on GPS receiver
+  */
+  void gpsOn();
+
+  /** Turn off GPS receiver
+  */
+  void gpsOff();
 
   /** Check for incoming message
   *
-  * Returns true if there is an incoming SBD message available
+  * @returns 1 if there is an incoming SBD message available or 0 if none
   */
-  bool checkRingAlert();
+int checkRingAlert();
 
   /** Report last known signal quality
   *
-  * Returns number of signal "bars" (0 to 5)
+  * @returns number of signal "bars" (0 to 5)
   */
   char signalQuality();
 
@@ -36,25 +56,42 @@ public:
   *
   * Updates latitude, longitude, altitude, and # of satellites
   *
-  * Returns false if invalid position fix
+  * @returns false if invalid position fix
   */
   bool gpsUpdate();
 
   /** Return decimal latitude
+  *
+  * Converts latitude reported in last gpsUpdate from degree and decimal minute
+  * form to decimal degree form.  North is positive.
+  *
+  * @returns decimal latitude
   */
   float latitude();
 
   /** Return decimal longitude
   *
+  * Converts longitude reported in last gpsUpdate from degree and decimal minute
+  * form to decimal degree form. East is positive.
+  *
+  * @returns decimal longitude
   */
   float longitude();
 
   /** Return altitude
   *
-  * Returns altitude in meters. Requires previous gpsUpdate().
+  * Requires previous gpsUpdate()
+  *
+  * @returns altitude in meters
   */
   float altitude();
 
+private:
+  Serial modem;
+  DigitalIn _ri;
 
 
- }
+
+};
+
+ #endif
