@@ -14,6 +14,8 @@
 class NAL9602 {
 
 public:
+  Serial modem;
+
   /** Create a NAL9602 interface object connected to the specified pins
   *
   * @param tx_pin Serial TX pin
@@ -43,13 +45,13 @@ public:
   *
   * @returns 1 if there is an incoming SBD message available or 0 if none
   */
-int checkRingAlert();
+  int checkRingAlert();
 
   /** Report last known signal quality
   *
   * @returns number of signal "bars" (0 to 5)
   */
-  char signalQuality();
+  int signalQuality();
 
   /** Get GPS data
   *
@@ -86,7 +88,7 @@ int checkRingAlert();
   float altitude();
 
 private:
-  Serial modem;
+
 
 
 
