@@ -14,8 +14,8 @@
 // Status: Incomplete
 NAL9602::NAL9602(PinName tx_pin, PinName rx_pin) : modem(tx_pin, rx_pin) {
   // Start in "quiet" mode
-  //satLinkOff();
-  //gpsOff();
+  satLinkOff();
+  gpsOff();
 }
 
 // Status: Incomplete
@@ -24,8 +24,8 @@ NAL9602::~NAL9602(void) {
   /* TBC */
 
   // Shut down receivers
-  //satLinkOff();
-  //gpsOff();
+  satLinkOff();
+  gpsOff();
 }
 
 // Status: Tested with terminal
@@ -46,6 +46,7 @@ void NAL9602::gpsOn(void) {
 // Status: Tested with terminal
 void NAL9602::gpsOff(void) {
   modem.printf("AT+PP=0\n\r");
+  coord.clearCoordinates();
 }
 
 // Status: Tested with terminal
@@ -75,7 +76,7 @@ int NAL9602::signalQuality() {
   // Expected response has form: +CSQF:<rssi>
   argFilled = modem.scanf("+CSQF:%d", &bars);
   if (argFilled == 1) {
-    if ((bars>=0)&&(bars<=5))
+    if ((bars>=0) && (bars<=5))
       return bars;
     else
       return -2; // error: bars has invalid value

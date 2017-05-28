@@ -1,17 +1,21 @@
 #include "GPSCoordinates.h"
 
-GPSCoordinates::GPSCoordinates() {
+GPSCoordinates::GPSCoordinates(void) {
   clearCoordinates();
 }
 
-void GPSCoordinates::clearCoordinates() {
+GPSCoordinates::~GPSCoordinates() {
+
+}
+
+void GPSCoordinates::clearCoordinates(void) {
   positionFix = false;
   latSet = false;
   longSet = false;
   altSet = false;
 }
 
-bool GPSCoordinates::validCoordinates() {
+bool GPSCoordinates::validCoordinates(void) {
   return (positionFix && latSet && longSet && altSet);
 }
 
@@ -36,7 +40,7 @@ void GPSCoordinates::setLatitudeDegMin(int deg, int min, int mindec, bool north)
 void GPSCoordinates::setLongitudeDegMin(int deg, int min, int mindec, bool east) {
   bool valid = true;
   isEast = east;
-  if ((deg>=0)&&(deg<=90)) {
+  if ((deg>=0)&&(deg<=179)) {
     lonDeg = deg;
   } else valid = false;
 
@@ -58,7 +62,7 @@ void GPSCoordinates::setAltitude(float alt) {
   } else altSet = false;
 }
 
-float GPSCoordinates::getLatitudeDecDeg() {
+float GPSCoordinates::getLatitudeDecDeg(void) {
   float degrees = 0;
   if (validCoordinates()) {
     degrees = (float)latDeg;
@@ -72,7 +76,7 @@ float GPSCoordinates::getLatitudeDecDeg() {
   else return -999; // indicates error
 }
 
-float GPSCoordinates::getLongitudeDecDeg() {
+float GPSCoordinates::getLongitudeDecDeg(void) {
   float degrees = 0;
   if (validCoordinates()) {
     degrees = (float)lonDeg;
@@ -86,7 +90,7 @@ float GPSCoordinates::getLongitudeDecDeg() {
   else return -999; // indicates error
 }
 
-float GPSCoordinates::getAltitude() {
+float GPSCoordinates::getAltitude(void) {
   if (validCoordinates())
     return altitude;
   else

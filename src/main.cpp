@@ -1,6 +1,5 @@
 #include "mbed.h"
 #include "NAL9602.h"
-#include "GPSCoordinates.h"
 
 /** Command Module Microcontroller
  *
@@ -14,17 +13,13 @@
  */
 
 NAL9602 sat(USBTX,USBRX);
-GPSCoordinates coord();
-DigitalOut heartBeat(LED1);
+Serial pc(USBTX,USBRX);
 
 int main() {
-  int incomingMessageFlag;
   while (true) {
-    heartBeat = 1;
-    incomingMessageFlag = sat.signalQuality();
+    sat.gpsOn();
     wait(10);
-    heartBeat = 0;
-    sat.modem.printf("Satellite has %d bars\r\n",incomingMessageFlag);
-    wait(5);
+    sat.gpsOff();
+    wait(10);
   }
  }

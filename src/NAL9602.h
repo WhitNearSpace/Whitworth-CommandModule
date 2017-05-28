@@ -2,6 +2,7 @@
 #define NAL9602_H
 
 #include "mbed.h"
+#include "GPSCoordinates.h"
 
 /** Interface to NAL Research 9602-LP/A/AB satellite modems
  *
@@ -88,9 +89,7 @@ public:
   float altitude();
 
 private:
-
-
-
+  GPSCoordinates coord;
 
 };
 

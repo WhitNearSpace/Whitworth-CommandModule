@@ -38,6 +38,7 @@ public:
   float getLongitudeDecDeg();
 
   float getAltitude();
+  
 private:
   int latDeg;       // latitude degrees (integer portion)
   int latMin;       // latitude minutes (integer portion)
