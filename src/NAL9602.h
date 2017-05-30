@@ -4,6 +4,19 @@
 #include "mbed.h"
 #include "GPSCoordinates.h"
 
+/** Operating modes for GPS receiver
+*/
+enum gpsModes
+{
+  stationary = 1,
+  walking,
+  land_vehicle,
+  at_sea,
+  airborne_low_dynamic,
+  airborne_medium_dynamic,
+  airborne_high_dynamic
+};
+
 /** Interface to NAL Research 9602-LP/A/AB satellite modems
  *
  *  @author John M. Larkin (jlarkin@whitworth.edu)
@@ -11,18 +24,18 @@
  *  @date 2017
  *  @copyright GNU Public License
  */
-
 class NAL9602 {
 
 public:
   Serial modem;
+  InterruptIn RI;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *
   * @param tx_pin Serial TX pin
   * @param rx_pin Serial RX pin
   */
-  NAL9602(PinName tx_pin, PinName rx_pin);
+  NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin = NC);
 
   ~NAL9602();
 
@@ -88,8 +101,32 @@ public:
   */
   float altitude();
 
+  /** Set GPS mode
+  *
+  * @param mode gives operating environment for GPS
+  * 1 = stationary
+  * 2 = walking
+  * 3 = land vehicle
+  * 4 = at sea
+  * 5 = airborne, low dynamics (<1g)
+  * 6 = airborne, medium dynamics (<2g)
+  * 7 = airborne, high dynamics (<4g)
+  */
+  void setModeGPS(gpsModes mode);
+
+  /** Reset outgoing message counter
+  *
+  * Sets the MOMSN (mobile originated message sequence number)
+  * to zero.
+  */
+  void zeroMessageCounter();
+
+  int transmitMessage();
+
 private:
   GPSCoordinates coord;
+  bool messageAvailable;
+  int incomingMessageLength;
 
 };
 

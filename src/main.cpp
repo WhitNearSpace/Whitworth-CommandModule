@@ -17,9 +17,13 @@ Serial pc(USBTX,USBRX);
 
 int main() {
   while (true) {
-    sat.gpsOn();
-    wait(10);
-    sat.gpsOff();
+    sat.zeroMessageCounter();
+    wait(1);
+    sat.setModeGPS(airborne_low_dynamic);
+    wait(1);
+    sat.setModeGPS(stationary);
+    wait(1);
+    sat.setModeGPS(land_vehicle);
     wait(10);
   }
  }

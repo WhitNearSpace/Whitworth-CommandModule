@@ -83,3 +83,75 @@ int NAL9602::signalQuality() {
   } else
     return -1; // error: no value for bars found
 }
+
+// Status: Tested with terminal
+bool NAL9602::gpsUpdate() {
+  int argFilled;
+  bool valid = true;
+  int deg, min, decmin;
+  char dir;
+  float alt;
+  char fixString[80];
+  char invalidString[] = "Invalid";
+  int num;
+
+  modem.printf("AT+PLOC\n\r");
+  /* Expected response has the form:
+   * +PLOC:
+   * Latitude:<||>:<mm>.<nnnnn> <N/S>
+   * Longitude: <ooo>:<pp>.<qqqqq> <E/W>
+   * Altitude: <#> meters
+   * <Position Fix>= Invalid Position Fix, Valid Positon Fix, or Dead Reckoning
+   * Satellites Used=<zz>
+   */
+   modem.scanf("+PLOC:");
+   argFilled = modem.scanf(" Latitude:%d:%d.%d %c",&deg,&min,&decmin,&dir);
+   if (argFilled == 4) {
+     coord.setLatitudeDegMin(deg, min, decmin, dir=='N');
+   } else valid = false;
+
+   argFilled = modem.scanf(" Longitude:%d:%d.%d %c",&deg,&min,&decmin,&dir);
+   if (argFilled == 4) {
+     coord.setLongitudeDegMin(deg, min, decmin, dir=='E');
+   } else valid = false;
+
+   argFilled = modem.scanf(" Altitude:%f meters",&alt);
+   if (argFilled == 1)
+    coord.setAltitude(alt);
+   else valid = false;
+
+   modem.scanf("%79s", &fixString);
+   if (strcmp(invalidString,fixString)==0)
+    valid = false;
+
+   argFilled = modem.scanf("[^S]Satellites Used=%d", &num);
+   coord.satUsed = num;
+   coord.positionFix = valid;
+
+   return valid;
+}
+
+// Status: Ready for testing
+float NAL9602::latitude() {
+  return coord.getLatitudeDecDeg();
+}
+
+// Status: Ready for testing
+float NAL9602::longitude() {
+  return coord.getLongitudeDecDeg();
+}
+
+// Status: Ready for testing
+float NAL9602::altitude() {
+  return coord.getAltitude();
+}
+
+// Status: Tested with terminal
+void NAL9602::setModeGPS(gpsModes mode) {
+  modem.printf("AT+PNAV=%d\n\r",mode);
+}
+
+// Status: Tested with terminal
+void NAL9602::zeroMessageCounter() {
+  modem.printf("AT+SBDC\n\r");
+}
