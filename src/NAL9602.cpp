@@ -12,7 +12,12 @@
  */
 
 // Status: Incomplete
-NAL9602::NAL9602(PinName tx_pin, PinName rx_pin) : modem(tx_pin, rx_pin) {
+NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin, rx_pin), RI(ri_pin) {
+  // Set initial state of flags
+  ringAlert = false;
+  messageAvailable = false;
+  validTime = false;
+
   // Start in "quiet" mode
   satLinkOff();
   gpsOff();
@@ -59,9 +64,10 @@ int NAL9602::checkRingAlert(void) {
   // tri is not defined for 9602
   argFilled = modem.scanf("+CRIS: %*d,%d", &sri);
   if (argFilled == 1) {
-    if ( (sri==0) || (sri==1) )
+    if ( (sri==0) || (sri==1) ) {
+      ringAlert = (sri==1);
       return sri;
-    else
+    } else
       return -2; // error: sri has invalid value
   } else
     return -1;  // error: no value for sri found
@@ -154,4 +160,57 @@ void NAL9602::setModeGPS(gpsModes mode) {
 // Status: Tested with terminal
 void NAL9602::zeroMessageCounter() {
   modem.printf("AT+SBDC\n\r");
+}
+
+// Status: Ready for testing
+int NAL9602::transmitMessage() {
+  int outgoingStatus;
+  int outgoingMessageCount;
+  int incomingStatus;
+  int incomingMessageCount;
+  int incomingLength;
+  int queueLength;
+  if ((RI==1)||ringAlert) {
+    modem.printf("AT+PSIXA\n\r");
+  } else {
+    modem.printf("AT+PSIX\n\r");
+  }
+  modem.scanf("+SBDIX:%d,%d,%d,%d,%d,%d", &outgoingStatus,
+    &outgoingMessageCount, &incomingStatus, &incomingMessageCount,
+    &incomingLength, &queueLength);
+  if (incomingStatus == 1) {
+    messageAvailable = true;
+    incomingMessageLength = incomingLength;
+  }
+  if (queueLength == 0)
+    ringAlert = false;
+  return outgoingStatus;
+}
+
+// Status: Incomplete
+bool NAL9602::syncTime() {
+  struct tm t;
+  validTime = false;
+
+  // Get UTC date from GPS
+  modem.printf("AT+PD\n\r");
+  modem.scanf("+PD:");
+  modem.scanf(" UTC Date = %u-%u-%u", &t.tm_mon, &t.tm_mday,
+    &t.tm_year);
+  t.tm_year = t.tm_year - 1900; // Years since 1900 is required
+  t.tm_mon = t.tm_mon - 1;  // January = 0, not 1
+  modem.scanf("[^S]Satellites Used=%*d");  // scan to end of response
+
+  // Get UTC time from GPS
+  modem.printf("AT+PT\n\r");
+  modem.scanf("+PT:");
+  modem.scanf(" UTC Time=%u:%u:%u.%*u", &t.tm_hour, &t.tm_min, &t.tm_sec);
+  modem.scanf("[^S]Satellites Used=%*d");  // scan to end of response
+
+  // Set RTC and associated flag
+  set_time(mktime(&t));
+  time_t seconds = time(NULL);
+  if (seconds > 1496150000)
+    validTime = true;
+  return validTime;
 }

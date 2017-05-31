@@ -29,6 +29,9 @@ class NAL9602 {
 public:
   Serial modem;
   InterruptIn RI;
+  bool ringAlert;
+  bool messageAvailable;
+  bool validTime;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *
@@ -121,11 +124,19 @@ public:
   */
   void zeroMessageCounter();
 
+  /** Send SBD message from 9602 to ground station
+  * Also checks for incoming messages and loads one if available
+  */
   int transmitMessage();
+
+  /** Set the microcontroller real-time clock from GPS time
+  *
+  * @returns true if successful sync
+  */
+  bool syncTime();
 
 private:
   GPSCoordinates coord;
-  bool messageAvailable;
   int incomingMessageLength;
 
 };
