@@ -20,5 +20,9 @@ void SBDmessage::generateGPSBytes(GPSCoordinates &gps) {
   int16_t t;
 
   // miscByte is a bit collection
-  miscByte |= (gps.positionFix);  // bit 0 = GPS position fix 
+  //if (gps.positionFix) miscByte |= 0x01;
+  miscByte |= (gps.positionFix); // bit 0 is GPS fix
+  miscByte |= (gps.isNorth)<<1;  // bit 1 is north/south
+  miscByte |= (gps.isEast)<<2;  // bit 2 is east/west
+  sbd[2] = miscByte;
 }

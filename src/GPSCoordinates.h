@@ -16,6 +16,8 @@ class GPSCoordinates {
 public:
   bool positionFix; // Is the position valid?
   int satUsed;      // How many satellites were used?
+  bool isNorth;
+  bool isEast;
 
   /** Create a GPSCoordinates object
   */
@@ -38,7 +40,7 @@ public:
   float getLongitudeDecDeg();
 
   float getAltitude();
-  
+
 private:
   int latDeg;       // latitude degrees (integer portion)
   int latMin;       // latitude minutes (integer portion)
@@ -47,8 +49,6 @@ private:
   int lonMin;       // longitude minutes (integer portion)
   int lonMinDec;    // decimal portion of longitude minutes
   float altitude;    // Altitude (in meters)
-  bool isNorth;
-  bool isEast;
   bool latSet;
   bool longSet;
   bool altSet;
