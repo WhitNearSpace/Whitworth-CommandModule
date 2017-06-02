@@ -16,8 +16,7 @@ class GPSCoordinates {
 public:
   bool positionFix; // Is the position valid?
   int satUsed;      // How many satellites were used?
-  bool isNorth;
-  bool isEast;
+  time_t syncTime; // Time of last GPS update (in seconds since 1/1/1970)
 
   /** Create a GPSCoordinates object
   */
@@ -41,6 +40,22 @@ public:
 
   float getAltitude();
 
+  int getRawLatitude();
+
+  int getRawLongitude();
+
+  void setGroundSpeed(float v);
+
+  void setVerticalVelocity(float v);
+
+  void setHeading(int h);
+
+  int getRawGroundSpeed();
+
+  int getRawVerticalVelocity();
+
+  int getHeading();
+
 private:
   int latDeg;       // latitude degrees (integer portion)
   int latMin;       // latitude minutes (integer portion)
@@ -52,6 +67,12 @@ private:
   bool latSet;
   bool longSet;
   bool altSet;
+  bool isNorth;
+  bool isEast;
+  int grndSpeed;  // ground speed in units of tenths of km/h
+  int vertVel; // vertical velocity in units of tenths of m/s
+  int heading; // degrees from true north
+
 };
 
 #endif

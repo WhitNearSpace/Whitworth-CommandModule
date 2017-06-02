@@ -13,6 +13,7 @@ void GPSCoordinates::clearCoordinates(void) {
   latSet = false;
   longSet = false;
   altSet = false;
+  syncTime = 0;
 }
 
 bool GPSCoordinates::validCoordinates(void) {
@@ -67,7 +68,7 @@ float GPSCoordinates::getLatitudeDecDeg(void) {
   if (validCoordinates()) {
     degrees = (float)latDeg;
     degrees += (float)latMin/60.0;
-    degrees += (float)latMinDec/1000000.0;
+    degrees += (float)latMinDec/100000.0/60.0;
     if (isNorth)
       return degrees;
     else
@@ -76,12 +77,25 @@ float GPSCoordinates::getLatitudeDecDeg(void) {
   else return -999; // indicates error
 }
 
+int GPSCoordinates::getRawLatitude(void) {
+  int angle; // angle in units of 10,000th of a minute
+  if (validCoordinates()) {
+    angle = latMinDec;
+    angle += latMin*100000;
+    angle += latDeg*100000*60;
+    if (isNorth)
+      return angle;
+    else
+      return -angle;
+  } else return 0;
+}
+
 float GPSCoordinates::getLongitudeDecDeg(void) {
   float degrees = 0;
   if (validCoordinates()) {
     degrees = (float)lonDeg;
     degrees += (float)lonMin/60.0;
-    degrees += (float)lonMinDec/1000000.0;
+    degrees += (float)lonMinDec/100000.0/60.0;
     if (isEast)
       return degrees;
     else
@@ -90,9 +104,50 @@ float GPSCoordinates::getLongitudeDecDeg(void) {
   else return -999; // indicates error
 }
 
+int GPSCoordinates::getRawLongitude(void) {
+  int angle; // angle in units of 10,000th of a minute
+  if (validCoordinates()) {
+    angle = lonMinDec;
+    angle += lonMin*100000;
+    angle += lonDeg*100000*60;
+    if (isEast)
+      return angle;
+    else
+      return -angle;
+  } else return 0;
+}
+
 float GPSCoordinates::getAltitude(void) {
   if (validCoordinates())
     return altitude;
   else
     return -999;  // indicates error
+}
+
+void GPSCoordinates::setGroundSpeed(float v) {
+  if (v>=0)
+    grndSpeed = (int)(v*10);
+}
+
+int GPSCoordinates::getRawGroundSpeed(void) {
+  return grndSpeed;
+}
+
+void GPSCoordinates::setVerticalVelocity(float v) {
+  vertVel = (int)(v*10);
+}
+
+int GPSCoordinates::getRawVerticalVelocity(void) {
+  return vertVel;
+}
+
+void GPSCoordinates::setHeading(int h) {
+  if ((h>=0)&&(h<=360))
+    heading = h;
+  else
+    heading = 0;
+}
+
+int GPSCoordinates::getHeading(void) {
+  return heading;
 }

@@ -100,6 +100,7 @@ bool NAL9602::gpsUpdate() {
   char fixString[80];
   char invalidString[] = "Invalid";
   int num;
+  time_t receivedTime;
 
   modem.printf("AT+PLOC\n\r");
   /* Expected response has the form:
@@ -111,6 +112,7 @@ bool NAL9602::gpsUpdate() {
    * Satellites Used=<zz>
    */
    modem.scanf("+PLOC:");
+   receivedTime = time(NULL);
    argFilled = modem.scanf(" Latitude:%d:%d.%d %c",&deg,&min,&decmin,&dir);
    if (argFilled == 4) {
      coord.setLatitudeDegMin(deg, min, decmin, dir=='N');
@@ -132,7 +134,31 @@ bool NAL9602::gpsUpdate() {
 
    argFilled = modem.scanf("[^S]Satellites Used=%d", &num);
    coord.satUsed = num;
+   if (valid)
+    coord.syncTime = receivedTime;
    coord.positionFix = valid;
+
+   modem.printf("AT+PVEL\n\r");
+   /* Expected response has the form:
+    * +PVEL:
+    * Ground Velocity=<#g> km/h, <#h> degrees from true North
+    * Vertical Velocity=<#v> m/s
+    * <Position Fix>= Invalid Position Fix, Valid Positon Fix, or Dead Reckoning
+    * Satellites Used=<zz>
+    */
+    float v;
+    int h;
+    modem.scanf("+PVEL:");
+    argFilled = modem.scanf(" Ground Velocity=%f km/h, %d", &v, &h);
+    if (argFilled == 2) {
+      coord.setGroundSpeed(v);
+      coord.setHeading(h);
+    };
+    argFilled = modem.scanf("[^V]Vertical Velocity=%f", &v);
+    if (argFilled == 1) {
+      coord.setVerticalVelocity(v);
+    }
+    argFilled = modem.scanf("[^S]Satellites Used=%*d");
 
    return valid;
 }
@@ -187,7 +213,7 @@ int NAL9602::transmitMessage() {
   return outgoingStatus;
 }
 
-// Status: Incomplete
+// Status: Ready for testing
 bool NAL9602::syncTime() {
   struct tm t;
   validTime = false;

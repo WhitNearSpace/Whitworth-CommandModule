@@ -19,18 +19,42 @@ GPSCoordinates gps;
 
 int main() {
   int16_t id = 1;
+  time_t t;
+  int32_t rawLat;
+  int32_t rawLon;
+  uint16_t alt;
+  uint16_t gs;
+  int16_t vv;
+  int h;
   SBDmessage msg(id);
   gps.positionFix = true;
+  gps.syncTime = 1496150000;
   gps.setLatitudeDegMin(48,40,0,true);
   gps.setLongitudeDegMin(170,23,0,false);
   gps.setAltitude(35000);
+  gps.setGroundSpeed(20.5);
+  gps.setHeading(315);
+  gps.setVerticalVelocity(5);
   msg.generateGPSBytes(gps);
   while (true) {
-    pc.printf("The mission ID is %u%u\r\n",msg.getByte(0),msg.getByte(1));
-    pc.printf("The status byte is 0x%x\r\n", msg.getByte(2));
-    pc.printf("\tGPS fix: %d\r\n", msg.getByte(2)&0x01);
-    pc.printf("\tNorth: %d\r\n", msg.getByte(2)&0x02);
-    pc.printf("\tEast: %d\r\n", msg.getByte(2)&0x04);
+    pc.printf("\r\nThe mission ID is %d\r\n",msg.retrieveInt16(0));
+    pc.printf("The bit byte is 0x%x\r\n", msg.getByte(2));
+    t = msg.retrieveInt32(3);
+    pc.printf("The time is %s", ctime(&t));
+    rawLat = msg.retrieveInt32(7);
+    pc.printf("The latitude is %f degrees\r\n",(float)(rawLat)/60.0/100000.0);
+    rawLon = msg.retrieveInt32(11);
+    pc.printf("The longitude is %f degrees\r\n",(float)(rawLon)/60.0/100000.0);
+    alt = msg.retrieveUInt16(15);
+    pc.printf("The altitude is %u m\r\n", alt);
+    vv = msg.retrieveInt16(17);
+    pc.printf("The vertical velocity is %f m/s\r\n", vv/10.0);
+    gs = msg.retrieveUInt16(19);
+    pc.printf("The ground speed is %f km/h\r\n", gs/10.0);
+    h = msg.getByte(21);
+    if (!(msg.getByte(2)&0x02))
+      h = -h;
+    pc.printf("The heading is %d deg\r\n", h);
     wait(5);
   }
  }
