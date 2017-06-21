@@ -4,6 +4,10 @@
 #include "mbed.h"
 #include "GPSCoordinates.h"
 
+#define BUFFLENGTH 800
+
+extern Serial pc;
+
 /** Operating modes for GPS receiver
 */
 enum gpsModes
@@ -32,6 +36,7 @@ public:
   bool ringAlert;
   bool messageAvailable;
   bool validTime;
+  bool verboseLogging;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *
@@ -134,6 +139,13 @@ public:
   * @returns true if successful sync
   */
   bool syncTime();
+
+  /** Listen to 9602-LP
+  *
+  */
+  void echoModem();
+
+  void scanToEnd(bool verbose = false);
 
 private:
   GPSCoordinates coord;
