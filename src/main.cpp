@@ -18,24 +18,35 @@ Serial pc(USBTX,USBRX);
 DigitalOut led1(LED1);
 
 int main() {
+  gpsModes currentGPSmode = stationary;
+  NetworkRegistration regResponse;
+  BufferStatus buffStatus;
   Timer pauseTime;
   time_t t;
-  sat.verboseLogging = true;
   pc.baud(115200);
+  pc.printf("\r\n\r\n----------------------------------------\r\n");
+  pc.printf("LPC1768 restarting...\r\n\r\n");
   led1 = 0;
   pauseTime.start();
-  while (!sat.modem.readable() && pauseTime<15) {
+  while (!sat.modem.readable() && pauseTime<5) {
   }
   sat.echoModem();
+  // End start-up procedure
+  sat.setModeGPS(currentGPSmode);
   while (!sat.validTime) {
-    wait(15);
     led1 = 1;
     sat.syncTime();
     led1 = 0;
+    if (!sat.validTime)
+      wait(15);
   }
   time(&t);
   printf("%s\r\n", ctime(&t));
-  sat.gpsUpdate();
+  sat.verboseLogging = true;
+  sat.sbdMessage.setMissionID(1);
+  buffStatus = sat.getBufferStatus();
+  pc.printf("Incoming message: %d, %d\r\n", buffStatus.incomingFlag, buffStatus.incomingMsgNum);
+  pc.printf("Outgoing message: %d, %d\r\n", buffStatus.outgoingFlag, buffStatus.outgoingMsgNum);
   while (true) {
   }
  }

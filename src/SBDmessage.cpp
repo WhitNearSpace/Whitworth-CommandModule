@@ -1,16 +1,24 @@
 #include "SBDmessage.h"
 
 // Status: Tested with terminal
-SBDmessage::SBDmessage(int16_t missionID) {
-  storeInt16(0, missionID);
-  for (int i = 2; i<SBD_LENGTH; i++) {
+SBDmessage::SBDmessage() {
+  for (int i = 0; i<MAX_SBD_LENGTH; i++) {
     sbd[i] = 0;
   }
+  msgLength = 22;
+}
+
+SBDmessage::~SBDmessage() {
+
+}
+
+void SBDmessage::setMissionID(int16_t missionID) {
+  storeInt16(0, missionID);
 }
 
 // Status: Tested with terminal
 char SBDmessage::getByte(int i) {
-  if ((i>=0)&&(i<SBD_LENGTH))
+  if ((i>=0)&&(i<MAX_SBD_LENGTH))
     return sbd[i];
 }
 
@@ -48,6 +56,26 @@ void SBDmessage::generateGPSBytes(GPSCoordinates &gps) {
 
   // Heading relative to true north (0-180 deg, sign in bitByte)
   sbd[21] = (char)(heading);
+}
+
+// Status: Incomplete
+unsigned short SBDmessage::generateChecksum() {
+  unsigned short cs = 0;
+  for (int i = 0; i<msgLength; i++) {
+    cs += sbd[i];
+  }
+  checksum[0] = cs/256;
+  checksum[1] = cs%256;
+  return cs;
+}
+
+void SBDmessage::loadTestMsg() {
+  sbd[0] = 'h';
+  sbd[1] = 'e';
+  sbd[2] = 'l';
+  sbd[3] = 'l';
+  sbd[4] = 'o';
+  msgLength = 5;
 }
 
 void SBDmessage::storeInt32(int startIndex, int32_t data) {

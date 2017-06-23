@@ -5,7 +5,7 @@
 #include "mbed.h"
 
 
-#define SBD_LENGTH 340
+#define MAX_SBD_LENGTH 340
 
 /** Whitworth Near Space SBD Message object
  *
@@ -18,13 +18,18 @@ class SBDmessage {
 
 public:
   /** Create an SBDmessage object
+  */
+  SBDmessage();
+
+  ~SBDmessage();
+
+  /** Set mission ID
   *
   * @param missionID Mission ID number registered with server
   *   Positive ID = archive. Negative ID = testing (not archived)
   */
-  SBDmessage(int16_t missionID);
+  void setMissionID(int16_t missionID);
 
-  ~SBDmessage();
 
   /** Get ith byte of SBD Message
   *
@@ -40,12 +45,20 @@ public:
   */
   void generateGPSBytes(GPSCoordinates &gps);
 
+  /** Calculate the checksum
+  */
+  unsigned short generateChecksum();
+
+  void loadTestMsg();
+
   int32_t retrieveInt32(int startIndex);
   uint16_t retrieveUInt16(int startIndex);
   int16_t retrieveInt16(int startIndex);
 
 private:
-  char sbd[SBD_LENGTH];
+  char sbd[MAX_SBD_LENGTH];
+  char checksum[2];
+  int msgLength;
   void storeInt32(int startIndex, int32_t data);
   void storeUInt16(int startIndex, uint16_t data);
   void storeInt16(int startIndex, int16_t data);
