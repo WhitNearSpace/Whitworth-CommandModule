@@ -26,6 +26,7 @@ int main() {
   uint16_t gs;
   int16_t vv;
   int h;
+  char podData[] = {0x01, 0x02, 0x04, 0x08, 0x10};
   SBDmessage msg(id);
   gps.positionFix = true;
   gps.syncTime = 1496150000;
@@ -36,6 +37,9 @@ int main() {
   gps.setHeading(315);
   gps.setVerticalVelocity(5);
   msg.generateGPSBytes(gps);
+  msg.generateCommandModuleBytes(7.38f, 38.23f, -40.0f);
+  msg.loadPodBuffer(2, 5, podData);
+  msg.generatePodBytes();
   while (true) {
     pc.printf("\r\nThe mission ID is %d\r\n",msg.retrieveInt16(0));
     pc.printf("The bit byte is 0x%x\r\n", msg.getByte(2));
@@ -55,6 +59,10 @@ int main() {
     if (!(msg.getByte(2)&0x02))
       h = -h;
     pc.printf("The heading is %d deg\r\n", h);
+    pc.printf("The battery voltage is %.2f V\r\n", msg.getByte(22)/20.0);
+    pc.printf("The internal temperature is %.2f deg C\r\n", msg.retrieveInt16(23)/100.0);
+    pc.printf("The external temperature is %.2f deg C\r\n", msg.retrieveInt16(25)/100.0);
+    msg.testPodBytes();
     wait(5);
   }
  }

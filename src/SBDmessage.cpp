@@ -3,9 +3,15 @@
 // Status: Tested with terminal
 SBDmessage::SBDmessage(int16_t missionID) {
   storeInt16(0, missionID);
-  for (int i = 2; i<SBD_LENGTH; i++) {
+  clearMessage();
+}
+
+void SBDmessage::clearMessage() {
+  for (int i = 2; i<SBD_LENGTH; i++)
     sbd[i] = 0;
-  }
+  msgLength = 27;
+  for (int i = 0; i<6; i++)
+    podLengths[i] = 0;
 }
 
 // Status: Tested with terminal
@@ -50,6 +56,20 @@ void SBDmessage::generateGPSBytes(GPSCoordinates &gps) {
   sbd[21] = (char)(heading);
 }
 
+// Status: Ready for testing
+void SBDmessage::generateCommandModuleBytes(float voltage, float intTemp, float extTemp) {
+  // Store battery voltage in units of 0.05 V in byte 22
+  sbd[22] = (char)(voltage*20);
+
+  // Store internal temperature in units of 0.01 deg C in bytes 23-24
+  storeInt16(23, (int16_t)(intTemp*100));
+
+  // Store external temperature in units of 0.01 deg C in bytes 25-26
+  storeInt16(25, (int16_t)(extTemp*100));
+}
+
+
+// Status: Tested with terminal
 void SBDmessage::storeInt32(int startIndex, int32_t data) {
   sbd[startIndex] = data >> 24;
   sbd[startIndex+1] = data >> 16;
@@ -57,16 +77,19 @@ void SBDmessage::storeInt32(int startIndex, int32_t data) {
   sbd[startIndex+3] = data;
 }
 
+// Status: Tested with terminal
 void SBDmessage::storeInt16(int startIndex, int16_t data) {
   sbd[startIndex] = data >> 8;
   sbd[startIndex+1] = data;
 }
 
+// Status: Tested with terminal
 void SBDmessage::storeUInt16(int startIndex, uint16_t data) {
   sbd[startIndex] = data >> 8;
   sbd[startIndex+1] = data;
 }
 
+// Status: Tested with terminal
 int32_t SBDmessage::retrieveInt32(int startIndex) {
   int32_t result = 0;
   result |= sbd[startIndex]<<24;
@@ -76,6 +99,7 @@ int32_t SBDmessage::retrieveInt32(int startIndex) {
   return result;
 }
 
+// Status: Tested with terminal
 uint16_t SBDmessage::retrieveUInt16(int startIndex) {
   uint16_t result = 0;
   result |= sbd[startIndex]<<8;
@@ -83,9 +107,56 @@ uint16_t SBDmessage::retrieveUInt16(int startIndex) {
   return result;
 }
 
+// Status: Tested with terminal
 int16_t SBDmessage::retrieveInt16(int startIndex) {
   int16_t result = 0;
   result |= sbd[startIndex]<<8;
   result |= sbd[startIndex+1];
   return result;
+}
+
+// Status: Ready for testing
+int SBDmessage::loadPodBuffer(int podID, char numBytes, char* data) {
+  if ((numBytes+msgLength-podLengths[podID-1]+1)<=SBD_LENGTH) {
+    msgLength += numBytes - podLengths[podID-1] + 1;
+    podLengths[podID-1] = numBytes;
+    for (int i = 0; i<numBytes; i++)
+      podData[podID-1][i] = data[i];
+    return 0;
+  } else return -1;
+}
+
+// Status: Ready for testing
+void SBDmessage::generatePodBytes() {
+  /* Data format:
+   *  First byte = number of bytes of data for pod i
+   *  Data bytes follow
+   */
+  int b = 27;
+  for (int i = 0; i<MAXPODS; i++) {
+    if (podLengths[i]>0) {
+      sbd[2] = sbd[2] | (0x01 << (2+i));
+      sbd[b] = podLengths[i];
+      for (int j = 0; j<podLengths[i]; j++) {
+        sbd[b+j+1] = podData[i][j];
+      }
+      b = b + podLengths[i] + 1;
+    }
+  }
+}
+
+void SBDmessage::testPodBytes() {
+  int b = 27;
+  char dl;
+  for (int i = 0; i<MAXPODS; i++) {
+    if (sbd[2] & (0x01 << (2+i))) {
+      dl = sbd[b];
+      printf("Pod %d has %d data bytes\r\n\t", i+1, dl);
+      for (int j = 0; j<dl; j++) {
+        printf("%02X ", sbd[b+1+j]);
+      }
+      printf("\r\n");
+      b = b + dl + 1;
+    }
+  }
 }
