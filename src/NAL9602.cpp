@@ -20,38 +20,33 @@ NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin,
 
   // Set modem baud rate
   modem.baud(19200);
-
-  // Start in "quiet" mode
-  //satLinkOff();
-  //gpsOff();
 }
 
 // Status: Incomplete
 NAL9602::~NAL9602(void) {
   // Detach 9602 from Iridium network
   /* TBC */
-
-  // Shut down receivers
-  satLinkOff();
-  gpsOff();
 }
 
 // Status: Tested with terminal
 void NAL9602::satLinkOn(void) {
   modem.printf("AT*S1\r");
   scanToEnd();
+  iridiumStatus = true;
 }
 
 // Status: Tested with terminal
 void NAL9602::satLinkOff(void) {
   modem.printf("AT*S0\r");
   scanToEnd();
+  iridiumStatus = false;
 }
 
 // Status: Lab tested with 9602-A
 void NAL9602::gpsOn(void) {
   modem.printf("AT+PP=1\r");
   scanToEnd();
+  gpsStatus = true;
 }
 
 // Status: Lab tested with 9602-A
@@ -59,6 +54,7 @@ void NAL9602::gpsOff(void) {
   modem.printf("AT+PP=0\r");
   scanToEnd();
   coord.clearCoordinates();
+  gpsStatus = false;
 }
 
 // Status: Lab tested with 9602-A
@@ -318,6 +314,40 @@ BufferStatus NAL9602::getBufferStatus() {
   modem.scanf(" +SBDS: %d,%d,%d,%d", &bs.outgoingFlag, &bs.outgoingMsgNum, &bs.incomingFlag, &bs.incomingMsgNum);
   scanToEnd();
   return bs;
+}
+
+// Status: Lab tested with 9602-A
+void NAL9602::addMessageGPS() {
+  sbdMessage.generateGPSBytes(coord);
+}
+
+// Status: Lab tested with 9602-A
+void NAL9602::addPodBytes(char podData[], int dataLength) {
+  sbdMessage.appendPodBytes(podData, dataLength);
+}
+
+// Status: Lab tested with 9602-A
+int NAL9602::setMessage() {
+  char status[80];
+  int err;
+  int n = sbdMessage.getMsgLength();
+  if (n > 340) {
+    return -1;
+  } else {
+    modem.printf("AT+SBDWB=%d\r", n);
+    modem.scanf("%79s", &status);
+    while ((strcmp(status,"READY")!=0)) {
+      modem.scanf("%79s", &status);
+    }
+    for (int i = 0; i < n; i++) {
+      modem.printf("%c", sbdMessage.getByte(i));
+    }
+    unsigned short checksum = sbdMessage.generateChecksum();
+    modem.printf("%c%c", (char)(checksum/256), (char)(checksum%256));
+    modem.scanf(" %d",&err);
+    scanToEnd();
+    return err;
+  }
 }
 
 // Status: Lab tested with 9602-A

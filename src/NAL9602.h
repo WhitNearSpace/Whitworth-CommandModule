@@ -53,6 +53,8 @@ public:
   bool messageAvailable;
   bool validTime;
   bool verboseLogging;
+  bool gpsStatus;
+  bool iridiumStatus;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *
@@ -179,10 +181,24 @@ public:
   */
   BufferStatus getBufferStatus();
 
+  /** Add GPS bytes to SBD message
+  */
+  void addMessageGPS();
+
+  /** Append pod data bytes to SBD message
+  *
+  * @param char podData[] - array of raw bytes
+  * @param int dataLength - number of raw bytes
+  */
+  void addPodBytes(char podData[], int dataLength);
+
+  /** Load outgoing message buffer
+  */
+  int setMessage();
+
 private:
   GPSCoordinates coord;
   int incomingMessageLength;
-
 };
 
  #endif

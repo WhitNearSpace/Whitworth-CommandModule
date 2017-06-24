@@ -58,7 +58,18 @@ void SBDmessage::generateGPSBytes(GPSCoordinates &gps) {
   sbd[21] = (char)(heading);
 }
 
-// Status: Incomplete
+void SBDmessage::appendPodBytes(char podData[], int dataLength) {
+  for (int i = 0; i < dataLength; i++) {
+    sbd[i+msgLength] = podData[i];
+  }
+  msgLength += dataLength;
+}
+
+int SBDmessage::getMsgLength() {
+  return msgLength;
+}
+
+// Status: Tested with terminal
 unsigned short SBDmessage::generateChecksum() {
   unsigned short cs = 0;
   for (int i = 0; i<msgLength; i++) {

@@ -45,11 +45,23 @@ public:
   */
   void generateGPSBytes(GPSCoordinates &gps);
 
+  /** Append pod data bytes to SBD message
+  *
+  * @param char podData[] - array of raw bytes
+  * @param int dataLength - number of raw bytes
+  */
+  void appendPodBytes(char podData[], int dataLength);
+
+
   /** Calculate the checksum
   */
   unsigned short generateChecksum();
 
+  int getMsgLength();
+
   void loadTestMsg();
+
+
 
   int32_t retrieveInt32(int startIndex);
   uint16_t retrieveUInt16(int startIndex);
