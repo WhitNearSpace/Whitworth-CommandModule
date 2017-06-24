@@ -3,18 +3,37 @@
 
 #include "mbed.h"
 #include "GPSCoordinates.h"
+#include "SBDmessage.h"
+
+#define BUFFLENGTH 800
+
+extern Serial pc;
 
 /** Operating modes for GPS receiver
 */
 enum gpsModes
 {
-  stationary = 1,
-  walking,
-  land_vehicle,
-  at_sea,
+  stationary = 2,
+  pedestrian,
+  automotive,
+  sea,
   airborne_low_dynamic,
   airborne_medium_dynamic,
   airborne_high_dynamic
+};
+
+struct NetworkRegistration
+{
+  int status;
+  int err;
+};
+
+struct BufferStatus
+{
+  int outgoingFlag;
+  int outgoingMsgNum;
+  int incomingFlag;
+  int incomingMsgNum;
 };
 
 /** Interface to NAL Research 9602-LP/A/AB satellite modems
@@ -29,9 +48,13 @@ class NAL9602 {
 public:
   Serial modem;
   InterruptIn RI;
+  SBDmessage sbdMessage;
   bool ringAlert;
   bool messageAvailable;
   bool validTime;
+  bool verboseLogging;
+  bool gpsStatus;
+  bool iridiumStatus;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *
@@ -107,13 +130,13 @@ public:
   /** Set GPS mode
   *
   * @param mode gives operating environment for GPS
-  * 1 = stationary
-  * 2 = walking
-  * 3 = land vehicle
-  * 4 = at sea
-  * 5 = airborne, low dynamics (<1g)
-  * 6 = airborne, medium dynamics (<2g)
-  * 7 = airborne, high dynamics (<4g)
+  * 2 = stationary
+  * 3 = pedestrian
+  * 4 = automotive
+  * 5 = sea
+  * 6 = airborne, low dynamics (<1g)
+  * 7 = airborne, medium dynamics (<2g)
+  * 8 = airborne, high dynamics (<4g)
   */
   void setModeGPS(gpsModes mode);
 
@@ -135,10 +158,47 @@ public:
   */
   bool syncTime();
 
+  /** Listen to 9602-LP
+  * Forward output of 9602 char-by-char to pc
+  */
+  void echoModem(int listenTime = 3);
+
+  /** Reads 9602 response until ERROR or OK found
+  * @param verbose - if true, print to pc
+  */
+  void scanToEnd(bool verbose = false);
+
+  /** Connect to Iridium network
+  */
+  NetworkRegistration joinNetwork();
+
+  /** Clear incoming and/or outgoing message buffer
+  * @param selectedBuffer - 0 = outgoing, 1 = incoming, 2 = both
+  */
+  void clearBuffer(int selectedBuffer);
+
+  /** Get status of outgoing and incoming buffers
+  */
+  BufferStatus getBufferStatus();
+
+  /** Add GPS bytes to SBD message
+  */
+  void addMessageGPS();
+
+  /** Append pod data bytes to SBD message
+  *
+  * @param char podData[] - array of raw bytes
+  * @param int dataLength - number of raw bytes
+  */
+  void addPodBytes(char podData[], int dataLength);
+
+  /** Load outgoing message buffer
+  */
+  int setMessage();
+
 private:
   GPSCoordinates coord;
   int incomingMessageLength;
-
 };
 
  #endif

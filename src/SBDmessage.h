@@ -20,13 +20,18 @@ class SBDmessage {
 
 public:
   /** Create an SBDmessage object
+  */
+  SBDmessage();
+
+  ~SBDmessage();
+
+  /** Set mission ID
   *
   * @param missionID Mission ID number registered with server
   *   Positive ID = archive. Negative ID = testing (not archived)
   */
-  SBDmessage(int16_t missionID);
+  void setMissionID(int16_t missionID);
 
-  ~SBDmessage();
 
   /** Get ith byte of SBD Message
   *
@@ -66,6 +71,12 @@ public:
   */
   void testPodBytes();
 
+  /** Calculate the checksum
+  */
+  unsigned short generateChecksum();
+
+  int getMsgLength();
+
   int32_t retrieveInt32(int startIndex);
   uint16_t retrieveUInt16(int startIndex);
   int16_t retrieveInt16(int startIndex);
@@ -74,6 +85,7 @@ private:
   char sbd[SBD_LENGTH];
   char podData[MAXPODS][POD_LENGTH];
   char podLengths[MAXPODS];
+  char checksum[2];
   int msgLength;
   void storeInt32(int startIndex, int32_t data);
   void storeUInt16(int startIndex, uint16_t data);

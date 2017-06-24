@@ -1,6 +1,7 @@
 #include "mbed.h"
 #include "NAL9602.h"
 #include "SBDmessage.h"
+#include "launchControlComm.h"
 
 /** Command Module Microcontroller
  *
@@ -13,56 +14,44 @@
  *  0.1 - Terminal emulation mode only for testing of NAL9602 library
  */
 
-//NAL9602 sat(USBTX,USBRX);
+char versionString[] = "0.1";
+char dateString[] = "6/23/2017";
+
+NAL9602 sat(p28,p27);
 Serial pc(USBTX,USBRX);
-GPSCoordinates gps;
+DigitalOut led1(LED1);
 
 int main() {
-  int16_t id = 1;
+  gpsModes currentGPSmode = stationary;
+  NetworkRegistration regResponse;
+  BufferStatus buffStatus;
+  Timer pauseTime;
   time_t t;
-  int32_t rawLat;
-  int32_t rawLon;
-  uint16_t alt;
-  uint16_t gs;
-  int16_t vv;
-  int h;
-  char podData[] = {0x01, 0x02, 0x04, 0x08, 0x10};
-  SBDmessage msg(id);
-  gps.positionFix = true;
-  gps.syncTime = 1496150000;
-  gps.setLatitudeDegMin(48,40,0,true);
-  gps.setLongitudeDegMin(170,23,0,false);
-  gps.setAltitude(35000);
-  gps.setGroundSpeed(20.5);
-  gps.setHeading(315);
-  gps.setVerticalVelocity(5);
-  msg.generateGPSBytes(gps);
-  msg.generateCommandModuleBytes(7.38f, 38.23f, -40.0f);
-  msg.loadPodBuffer(2, 5, podData);
-  msg.generatePodBytes();
-  while (true) {
-    pc.printf("\r\nThe mission ID is %d\r\n",msg.retrieveInt16(0));
-    pc.printf("The bit byte is 0x%x\r\n", msg.getByte(2));
-    t = msg.retrieveInt32(3);
-    pc.printf("The time is %s", ctime(&t));
-    rawLat = msg.retrieveInt32(7);
-    pc.printf("The latitude is %f degrees\r\n",(float)(rawLat)/60.0/100000.0);
-    rawLon = msg.retrieveInt32(11);
-    pc.printf("The longitude is %f degrees\r\n",(float)(rawLon)/60.0/100000.0);
-    alt = msg.retrieveUInt16(15);
-    pc.printf("The altitude is %u m\r\n", alt);
-    vv = msg.retrieveInt16(17);
-    pc.printf("The vertical velocity is %f m/s\r\n", vv/10.0);
-    gs = msg.retrieveUInt16(19);
-    pc.printf("The ground speed is %f km/h\r\n", gs/10.0);
-    h = msg.getByte(21);
-    if (!(msg.getByte(2)&0x02))
-      h = -h;
-    pc.printf("The heading is %d deg\r\n", h);
-    pc.printf("The battery voltage is %.2f V\r\n", msg.getByte(22)/20.0);
-    pc.printf("The internal temperature is %.2f deg C\r\n", msg.retrieveInt16(23)/100.0);
-    pc.printf("The external temperature is %.2f deg C\r\n", msg.retrieveInt16(25)/100.0);
-    msg.testPodBytes();
-    wait(5);
+  int err;
+  bool success;
+  int flightMode = 0;
+  pc.baud(115200);
+  pc.printf("\r\n\r\n--------------------------------------------------\r\n");
+  pc.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
+  pc.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
+  led1 = 0;
+  pauseTime.start();
+  while (!sat.modem.readable() && pauseTime<5) {
+  }
+  sat.verboseLogging = true;
+  sat.echoModem();
+  sat.setModeGPS(currentGPSmode);
+  // End start-up procedure
+  while (!sat.validTime) {
+    sat.syncTime();
+    if (!sat.validTime)
+      wait(15);
+  }
+  time(&t);
+  printf("%s\r\n", ctime(&t));
+  while (flightMode == 0) {
+    if (pc.readable()) {
+      parseLaunchControlInput(pc, sat);
+    }
   }
  }

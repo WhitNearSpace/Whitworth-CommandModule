@@ -1,17 +1,24 @@
 #include "SBDmessage.h"
 
 // Status: Tested with terminal
-SBDmessage::SBDmessage(int16_t missionID) {
-  storeInt16(0, missionID);
+SBDmessage::SBDmessage() {
   clearMessage();
 }
 
+SBDmessage::~SBDmessage() {
+
+}
+
 void SBDmessage::clearMessage() {
-  for (int i = 2; i<SBD_LENGTH; i++)
+  for (int i = 0; i<SBD_LENGTH; i++)
     sbd[i] = 0;
   msgLength = 27;
   for (int i = 0; i<6; i++)
     podLengths[i] = 0;
+}
+
+void SBDmessage::setMissionID(int16_t missionID) {
+  storeInt16(0, missionID);
 }
 
 // Status: Tested with terminal
@@ -68,8 +75,21 @@ void SBDmessage::generateCommandModuleBytes(float voltage, float intTemp, float 
   storeInt16(25, (int16_t)(extTemp*100));
 }
 
+int SBDmessage::getMsgLength() {
+  return msgLength;
+}
 
 // Status: Tested with terminal
+unsigned short SBDmessage::generateChecksum() {
+  unsigned short cs = 0;
+  for (int i = 0; i<msgLength; i++) {
+    cs += sbd[i];
+  }
+  checksum[0] = cs/256;
+  checksum[1] = cs%256;
+  return cs;
+}
+
 void SBDmessage::storeInt32(int startIndex, int32_t data) {
   sbd[startIndex] = data >> 24;
   sbd[startIndex+1] = data >> 16;
