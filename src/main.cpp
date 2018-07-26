@@ -2,6 +2,7 @@
 #include "NAL9602.h"
 #include "SBDmessage.h"
 #include "launchControlComm.h"
+#include "TMP36.h"
 
 /** Command Module Microcontroller
  *
@@ -17,9 +18,18 @@
 char versionString[] = "0.1";
 char dateString[] = "6/23/2017";
 
+Serial pc(p9,p10);
 NAL9602 sat(p28,p27);
-Serial pc(USBTX,USBRX);
-DigitalOut led1(LED1);
+TMP36 intTempSensor(p18);
+TMP36 extTempSensor(p20);
+AnalogIn batterySensor(p19);
+
+// Status LEDs
+DigitalOut powerStatus(p24);
+DigitalOut gpsStatus(p22);
+DigitalOut satStatus(p21);
+DigitalOut podStatus(p23);
+DigitalOut futureStatus(p25);
 
 int main() {
   gpsModes currentGPSmode = stationary;
@@ -30,11 +40,36 @@ int main() {
   int err;
   bool success;
   int flightMode = 0;
+
+  // Start-up LED sequence
+  powerStatus = 0;
+  gpsStatus = 0;
+  satStatus = 0;
+  podStatus = 0;
+  for (int i = 0; i<5; i++) {
+      futureStatus = 0;
+      powerStatus = 1;
+      wait(0.2);
+      powerStatus = 0;
+      gpsStatus = 1;
+      wait(0.2);
+      gpsStatus = 0;
+      satStatus = 1;
+      wait(0.2);
+      satStatus = 0;
+      podStatus = 1;
+      wait(0.2);
+      podStatus = 0;
+      futureStatus = 1;
+      wait(0.2);
+  }
+  futureStatus = 0;
+  powerStatus = 1;
+
   pc.baud(115200);
-  pc.printf("\r\n\r\n--------------------------------------------------\r\n");
+  pc.printf("\r\n\r\n----------------------------------------------------------------------------------------------------\r\n");
   pc.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
   pc.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
-  led1 = 0;
   pauseTime.start();
   while (!sat.modem.readable() && pauseTime<5) {
   }
