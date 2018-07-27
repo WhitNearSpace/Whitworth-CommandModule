@@ -39,6 +39,13 @@ int main() {
   time_t t;
   int err;
   bool success;
+
+  /** flightMode
+   *  0: lab mode - do not transmit SBD
+   *  1: preflight mode - transmit SBD at 5 minute intervals, wait for launch
+   *  2: flight mode - transmit SBD at specified interval (15-75 s), wait for land
+   *  3: postflight mode - transmit SBD at 10 minute intervals
+   */
   int flightMode = 0;
 
   // Start-up LED sequence
