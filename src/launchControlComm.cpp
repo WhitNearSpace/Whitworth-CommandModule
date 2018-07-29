@@ -16,6 +16,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
       sat.gpsOn();
     } else if (strcmp(strOpt,"OFF")==0) {
       sat.gpsOff();
+
     } else status = -2;
 
   // SATLINK commands
@@ -55,9 +56,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // CMDSENSORS request
   } else if (strcmp(cmd,"CMDSENSORS")==0) {
-    // Not yet implemented
-
-  // PODDATA request
+    status = sendCmdSensorsToLaunchControl(s, sat);
   } else if (strcmp(cmd,"PODDATA")==0) {
     // Not yet implemented
 
@@ -128,5 +127,13 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat) {
     }
   }
   sat.verboseLogging = logSetting;
+  return status;
+}
+
+int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
+  int status = 0;
+  s.printf("BAT=%.1f\r\n", batterySensor.read());
+  s.printf("EXT_TEMP=%.1f\r\n", extTempSensor.read());
+  s.printf("INT_TEMP=%.1f\r\n", intTempSensor.read());
   return status;
 }

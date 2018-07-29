@@ -185,12 +185,13 @@ public:
   */
   void addMessageGPS();
 
-  /** Append pod data bytes to SBD message
+  /** Store pod data bytes for inclusion into SBD message
   *
-  * @param char podData[] - array of raw bytes
-  * @param int dataLength - number of raw bytes
+  * @param int podID
+  * @param char numBytes - number of raw bytes
+  * @param char data[] - array of raw bytes
   */
-  void addPodBytes(char podData[], int dataLength);
+  void loadPodData(int podID, char numBytes, char* data);
 
   /** Load outgoing message buffer
   */
