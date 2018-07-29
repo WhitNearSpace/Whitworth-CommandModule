@@ -31,4 +31,6 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat);
 
 int sendGPStoLaunchControl(Serial &s, NAL9602 &sat);
 
+extern int flightTransPeriod;
+
 #endif

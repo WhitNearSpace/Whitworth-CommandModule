@@ -8,6 +8,8 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   s.scanf("%79s", &cmd);
   //s.printf("Match GPS? %d\r\n", strcmp(cmd,"GPS"));
   //s.printf("Match GPSDATA? %d\r\n", strcmp(cmd,"GPSDATA"));
+
+  // GPS commands
   if (strcmp(cmd,"GPS")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
@@ -15,6 +17,8 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     } else if (strcmp(strOpt,"OFF")==0) {
       sat.gpsOff();
     } else status = -2;
+
+  // SATLINK commands
   } else if (strcmp(cmd,"SATLINK")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
@@ -22,32 +26,79 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     } else if (strcmp(strOpt,"OFF")==0) {
       sat.satLinkOff();
     } else status = -2;
+
+  // PODLINK commands
   } else if (strcmp(cmd,"PODLINK")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
       // Not yet implemented
     } else if (strcmp(strOpt,"OFF")==0) {
       // Not yet implemented
-    } else status = -1;
+    } else status = -2;
+
+  // RADIO commands
   } else if (strcmp(cmd,"RADIO")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
       // Not yet implemented
     } else if (strcmp(strOpt,"OFF")==0) {
       // Not yet implemented
-    } else status = -1;
+    } else status = -2;
+
+  // SLEEPHEIGHT command
   } else if (strcmp(cmd,"SLEEPHEIGHT")==0) {
     // Not yet implemented
+
+  // GPSDATA request
   } else if (strcmp(cmd,"GPSDATA")==0) {
     status = sendGPStoLaunchControl(s, sat);
+
+  // CMDSENSORS request
   } else if (strcmp(cmd,"CMDSENSORS")==0) {
     // Not yet implemented
+
+  // PODDATA request
   } else if (strcmp(cmd,"PODDATA")==0) {
     // Not yet implemented
+
+  // MISSIONID command
   } else if (strcmp(cmd,"MISSIONID")==0) {
     // Not yet implemented
+
+  // PODLENGTHS command
   } else if (strcmp(cmd,"PODLENGTHS")==0) {
     // Not yet implemented
+
+  // FLIGHT_MODE commands
+  } else if (strcmp(cmd,"FLIGHT_MODE")==0) {
+    s.scanf(" %79s", &strOpt);
+    if (strcmp(strOpt,"ON")==0) {
+      if (flightMode<2) {
+        flightMode = 1;
+        timeSinceTrans.start();
+      } else {
+        status = -3;
+      }
+    } else if (strcmp(strOpt,"OFF")==0) {
+      if (flightMode<2) {
+        flightMode = 0;
+        timeSinceTrans.stop();
+        timeSinceTrans.reset();
+      } else {
+        status = -3;
+      }
+    } else if (strcmp(strOpt,"?")==0) {
+      s.printf("MODE=%i\r\n", flightMode);
+    } else status = -2;
+
+  // TRANSPERIOD command
+  } else if (strcmp(cmd,"TRANSPERIOD")==0) {
+    s.scanf(" = %i", &numOpt);
+    if ((numOpt>=15) && (numOpt<=90)) {
+      flightTransPeriod = numOpt;
+      status = 0;
+    } else status = -2;
+
   } else status = -1;
   if (status==0) {
     s.printf("OK\r\n");
