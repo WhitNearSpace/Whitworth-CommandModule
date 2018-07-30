@@ -61,7 +61,7 @@ public:
 
   /** Store pod bytes in buffer
   */
-  int loadPodBuffer(int podID, char numBytes, char* data);
+  int loadPodBuffer(int podID, char* data);
 
   /** Clear message
   */
@@ -75,16 +75,20 @@ public:
   */
   unsigned short generateChecksum();
 
-  int getMsgLength();
+  void updateMsgLength();
 
   int32_t retrieveInt32(int startIndex);
   uint16_t retrieveUInt16(int startIndex);
   int16_t retrieveInt16(int startIndex);
 
+
+
+public:
+  char podLengths[MAXPODS];
+
 private:
   char sbd[SBD_LENGTH];
   char podData[MAXPODS][POD_LENGTH];
-  char podLengths[MAXPODS];
   char checksum[2];
   int msgLength;
   void storeInt32(int startIndex, int32_t data);

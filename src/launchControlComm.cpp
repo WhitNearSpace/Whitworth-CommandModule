@@ -3,7 +3,7 @@
 int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   char cmd[80];
   char strOpt[80];
-  int numOpt;
+  int numOpt, numOpt2, numOpt3, numOpt4, numOpt5, numOpt6;
   int status = 0;
   s.scanf("%79s", &cmd);
   //s.printf("Match GPS? %d\r\n", strcmp(cmd,"GPS"));
@@ -16,7 +16,6 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
       sat.gpsOn();
     } else if (strcmp(strOpt,"OFF")==0) {
       sat.gpsOff();
-
     } else status = -2;
 
   // SATLINK commands
@@ -57,22 +56,34 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   // CMDSENSORS request
   } else if (strcmp(cmd,"CMDSENSORS")==0) {
     status = sendCmdSensorsToLaunchControl(s, sat);
+
+  // PODDATA command
   } else if (strcmp(cmd,"PODDATA")==0) {
     // Not yet implemented
 
   // MISSIONID command
   } else if (strcmp(cmd,"MISSIONID")==0) {
-    // Not yet implemented
+    s.scanf("=%i", &numOpt);
+    if ((numOpt>0) && (numOpt<32768)) {
+      missionID = numOpt;
+    } else {
+      status = -2;
+    }
 
   // PODLENGTHS command
   } else if (strcmp(cmd,"PODLENGTHS")==0) {
-    // Not yet implemented
+    s.scanf("=%i %i %i %i %i %i", &numOpt, &numOpt2, &numOpt3, &numOpt4,
+      &numOpt5, &numOpt6);
+    sbd.podLengths = [numOpt, numOpt2, numOpt3, numOpt4, numOpt5, numOpt6];
+    sbd.updateMsgLength();
 
   // FLIGHT_MODE commands
   } else if (strcmp(cmd,"FLIGHT_MODE")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
       if (flightMode<2) {
+        if (!sat.gpsStatus) sat.gpsOn();  // Flight mode requires GPS
+        if (!sat.iridiumStatus) sat.satLinkOn();  // Flight mode requires sat
         flightMode = 1;
         timeSinceTrans.start();
       } else {
@@ -95,7 +106,6 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     s.scanf(" = %i", &numOpt);
     if ((numOpt>=15) && (numOpt<=90)) {
       flightTransPeriod = numOpt;
-      status = 0;
     } else status = -2;
 
   } else status = -1;

@@ -12,13 +12,10 @@ SBDmessage::~SBDmessage() {
 void SBDmessage::clearMessage() {
   for (int i = 0; i<SBD_LENGTH; i++)
     sbd[i] = 0;
-  msgLength = 27;
-  for (int i = 0; i<6; i++)
-    podLengths[i] = 0;
 }
 
-void SBDmessage::setMissionID(int16_t missionID) {
-  storeInt16(0, missionID);
+void SBDmessage::setMissionID(int16_t mission_id) {
+  storeInt16(0, mission_id);
 }
 
 // Status: Tested with terminal
@@ -73,10 +70,6 @@ void SBDmessage::generateCommandModuleBytes(float voltage, float intTemp, float 
 
   // Store external temperature in units of 0.01 deg C in bytes 25-26
   storeInt16(25, (int16_t)(extTemp*100));
-}
-
-int SBDmessage::getMsgLength() {
-  return msgLength;
 }
 
 // Status: Tested with terminal
@@ -135,15 +128,20 @@ int16_t SBDmessage::retrieveInt16(int startIndex) {
   return result;
 }
 
+void SBDmessage::updateMsgLength() {
+  msgLength = 27;
+  for (int i = 0; i < MAXPODS; i++) {
+    if (podLengths[i]>0)
+      msgLength = msgLength + podLengths[i] + 1;
+  }
+}
+
 // Status: Ready for testing
-int SBDmessage::loadPodBuffer(int podID, char numBytes, char* data) {
-  if ((numBytes+msgLength-podLengths[podID-1]+1)<=SBD_LENGTH) {
-    msgLength += numBytes - podLengths[podID-1] + 1;
-    podLengths[podID-1] = numBytes;
-    for (int i = 0; i<numBytes; i++)
-      podData[podID-1][i] = data[i];
-    return 0;
-  } else return -1;
+int SBDmessage::loadPodBuffer(int podID, char* data) {
+  char numBytes = podLengths[podID-1];
+  for (int i = 0; i<numBytes; i++)
+    podData[podID-1][i] = data[i];
+  return 0;
 }
 
 // Status: Ready for testing

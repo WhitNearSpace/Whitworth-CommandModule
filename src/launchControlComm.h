@@ -17,12 +17,20 @@ extern TMP36 intTempSensor;
 extern TMP36 extTempSensor;
 extern AnalogIn batterySensor;
 
+extern SBDmessage sbd;
+extern int flightTransPeriod;
+extern int flightMode;
+extern Timer timeSinceTrans;
+extern int missionID;
+
 // Status LEDs
 extern DigitalOut powerStatus;
 extern DigitalOut gpsStatus;
 extern DigitalOut satStatus;
 extern DigitalOut podStatus;
 extern DigitalOut futureStatus;
+
+
 
 enum launchControlCommands
 {
@@ -43,7 +51,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat);
 
 int sendGPStoLaunchControl(Serial &s, NAL9602 &sat);
 
-extern int flightTransPeriod;
+
 
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat);
 

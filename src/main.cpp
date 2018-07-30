@@ -20,6 +20,7 @@ char dateString[] = "6/23/2017";
 
 Serial pc(p9,p10);
 NAL9602 sat(p28,p27);
+SBDmessage sbd();
 TMP36 intTempSensor(p18);
 TMP36 extTempSensor(p20);
 AnalogIn batterySensor(p19);
@@ -34,6 +35,7 @@ DigitalOut futureStatus(p25);
 int flightTransPeriod = 60;  // time between SBD transmissions (in s) during flight
 Timer timeSinceTrans;  // time since last SBD transmission
 int flightMode; // flag for mode (lab, pre-liftoff, moving, landed)
+int missionID;
 
 int main() {
   flightMode = 0;  // start in "lab" mode on powerup
@@ -53,7 +55,7 @@ int main() {
    *  2: flight mode - transmit SBD at specified interval (15-75 s), wait for land
    *  3: postflight mode - transmit SBD at 10 minute intervals
    */
-  int flightMode = 0;
+  flightMode = 0;
 
   // Start-up LED sequence
   powerStatus = 0;
@@ -111,6 +113,7 @@ int main() {
       case 1: // Flight mode, pre-liftoff
         if (timeSinceTrans > preTransPeriod) {
           timeSinceTrans.reset();
+          /* carryout procedure for transmitting SBD */
         }
         if (pc.readable()) {
           parseLaunchControlInput(pc, sat);
