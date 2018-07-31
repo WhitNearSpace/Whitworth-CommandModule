@@ -74,8 +74,13 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   } else if (strcmp(cmd,"PODLENGTHS")==0) {
     s.scanf("=%i %i %i %i %i %i", &numOpt, &numOpt2, &numOpt3, &numOpt4,
       &numOpt5, &numOpt6);
-    sbd.podLengths = [numOpt, numOpt2, numOpt3, numOpt4, numOpt5, numOpt6];
-    sbd.updateMsgLength();
+    sat.sbdMessage.podLengths[0] = numOpt;
+    sat.sbdMessage.podLengths[1] = numOpt2;
+    sat.sbdMessage.podLengths[2] = numOpt3;
+    sat.sbdMessage.podLengths[3] = numOpt4;
+    sat.sbdMessage.podLengths[4] = numOpt5;
+    sat.sbdMessage.podLengths[5] = numOpt6;
+    sat.sbdMessage.updateMsgLength();
 
   // FLIGHT_MODE commands
   } else if (strcmp(cmd,"FLIGHT_MODE")==0) {

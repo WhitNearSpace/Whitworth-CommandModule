@@ -85,12 +85,13 @@ public:
 
 public:
   char podLengths[MAXPODS];
+  int msgLength;
+
 
 private:
   char sbd[SBD_LENGTH];
   char podData[MAXPODS][POD_LENGTH];
   char checksum[2];
-  int msgLength;
   void storeInt32(int startIndex, int32_t data);
   void storeUInt16(int startIndex, uint16_t data);
   void storeInt16(int startIndex, int16_t data);

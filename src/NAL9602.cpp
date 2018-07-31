@@ -322,8 +322,8 @@ void NAL9602::addMessageGPS() {
 }
 
 // Status: Lab tested with 9602-A
-void NAL9602::loadPodData(int podID, char numBytes, char* data) {
-  sbdMessage.loadPodBuffer(podID, numBytes, data);
+void NAL9602::loadPodData(int podID, char* data) {
+  sbdMessage.loadPodBuffer(podID, data);
 }
 
 // Status: Lab tested with 9602-A
@@ -332,7 +332,7 @@ int NAL9602::setMessage() {
   int err;
   sbdMessage.generateGPSBytes(coord);
   sbdMessage.generatePodBytes();
-  int n = sbdMessage.getMsgLength();
+  int n = sbdMessage.msgLength;
   if (n > 340) {
     return -1;
   } else {

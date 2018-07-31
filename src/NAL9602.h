@@ -188,10 +188,9 @@ public:
   /** Store pod data bytes for inclusion into SBD message
   *
   * @param int podID
-  * @param char numBytes - number of raw bytes
   * @param char data[] - array of raw bytes
   */
-  void loadPodData(int podID, char numBytes, char* data);
+  void loadPodData(int podID, char* data);
 
   /** Load outgoing message buffer
   */

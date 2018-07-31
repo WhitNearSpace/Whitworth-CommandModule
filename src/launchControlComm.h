@@ -17,7 +17,8 @@ extern TMP36 intTempSensor;
 extern TMP36 extTempSensor;
 extern AnalogIn batterySensor;
 
-extern SBDmessage sbd;
+extern NAL9602 sat;
+
 extern int flightTransPeriod;
 extern int flightMode;
 extern Timer timeSinceTrans;

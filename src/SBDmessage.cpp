@@ -20,8 +20,11 @@ void SBDmessage::setMissionID(int16_t mission_id) {
 
 // Status: Tested with terminal
 char SBDmessage::getByte(int i) {
+  char val;
   if ((i>=0)&&(i<SBD_LENGTH))
-    return sbd[i];
+    val = sbd[i];
+  else val = 0;
+  return val;
 }
 
 // Status: Tested with terminal

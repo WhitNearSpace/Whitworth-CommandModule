@@ -20,7 +20,6 @@ char dateString[] = "6/23/2017";
 
 Serial pc(p9,p10);
 NAL9602 sat(p28,p27);
-SBDmessage sbd();
 TMP36 intTempSensor(p18);
 TMP36 extTempSensor(p20);
 AnalogIn batterySensor(p19);
@@ -38,6 +37,7 @@ int flightMode; // flag for mode (lab, pre-liftoff, moving, landed)
 int missionID;
 
 int main() {
+  pc.baud(115200);
   flightMode = 0;  // start in "lab" mode on powerup
   const int preTransPeriod = 300; // before "liftoff" transmit once per 5 minutes
   const int postTransPeriod = 600; // after "landing" transmit once per 10 minutes
@@ -62,27 +62,29 @@ int main() {
   gpsStatus = 0;
   satStatus = 0;
   podStatus = 0;
-  for (int i = 0; i<5; i++) {
-      futureStatus = 0;
-      powerStatus = 1;
-      wait(0.2);
-      powerStatus = 0;
-      gpsStatus = 1;
-      wait(0.2);
-      gpsStatus = 0;
-      satStatus = 1;
-      wait(0.2);
-      satStatus = 0;
-      podStatus = 1;
-      wait(0.2);
-      podStatus = 0;
-      futureStatus = 1;
-      wait(0.2);
+  for (int j = 0; j<15; j++) {
+    for (int i = 0; i<5; i++) {
+        futureStatus = 0;
+        powerStatus = 1;
+        wait(0.2);
+        powerStatus = 0;
+        gpsStatus = 1;
+        wait(0.2);
+        gpsStatus = 0;
+        satStatus = 1;
+        wait(0.2);
+        satStatus = 0;
+        podStatus = 1;
+        wait(0.2);
+        podStatus = 0;
+        futureStatus = 1;
+        wait(0.2);
+    }
   }
   futureStatus = 0;
   powerStatus = 1;
 
-  pc.baud(115200);
+
   pc.printf("\r\n\r\n----------------------------------------------------------------------------------------------------\r\n");
   pc.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
   pc.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
