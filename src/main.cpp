@@ -25,9 +25,9 @@ TMP36 extTempSensor(p20);
 AnalogIn batterySensor(p19);
 
 // Status LEDs
-DigitalOut powerStatus(p24);
+DigitalOut powerStatus(p24);  // red
 DigitalOut gpsStatus(p22);
-DigitalOut satStatus(p21);
+DigitalOut satStatus(p21);  // blue
 DigitalOut podStatus(p23);
 DigitalOut futureStatus(p25);
 
@@ -57,43 +57,48 @@ int main() {
    */
   flightMode = 0;
 
-  // Start-up LED sequence
+  // Start-up equence
   powerStatus = 0;
   gpsStatus = 0;
   satStatus = 0;
   podStatus = 0;
-  for (int j = 0; j<15; j++) {
-    for (int i = 0; i<5; i++) {
-        futureStatus = 0;
-        powerStatus = 1;
-        wait(0.2);
-        powerStatus = 0;
-        gpsStatus = 1;
-        wait(0.2);
-        gpsStatus = 0;
-        satStatus = 1;
-        wait(0.2);
-        satStatus = 0;
-        podStatus = 1;
-        wait(0.2);
-        podStatus = 0;
-        futureStatus = 1;
-        wait(0.2);
-    }
+  pauseTime.start();
+  while (!pc.readable() && pauseTime < 60) {
+    futureStatus = 0;
+    powerStatus = 1;
+    wait(0.2);
+    powerStatus = 0;
+    gpsStatus = 1;
+    wait(0.2);
+    gpsStatus = 0;
+    satStatus = 1;
+    wait(0.2);
+    satStatus = 0;
+    podStatus = 1;
+    wait(0.2);
+    podStatus = 0;
+    futureStatus = 1;
+    wait(0.2);
   }
+  pauseTime.stop();
+  pauseTime.reset();
   futureStatus = 0;
   powerStatus = 1;
 
+  if (pc.readable()) {
+    pc.printf("\r\n\r\n----------------------------------------------------------------------------------------------------\r\n");
+    pc.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
+    pc.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
+  }
 
-  pc.printf("\r\n\r\n----------------------------------------------------------------------------------------------------\r\n");
-  pc.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
-  pc.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
   pauseTime.start();
   while (!sat.modem.readable() && pauseTime<5) {
   }
   pauseTime.stop();
   sat.verboseLogging = true;
   sat.echoModem();
+  pc.printf("\r\n");
+  pc.printf("Battery = %0.2f V\r\n", batterySensor*13.29);
   sat.setModeGPS(currentGPSmode);
   // End start-up procedure
   while (!sat.validTime) {
@@ -101,8 +106,12 @@ int main() {
     if (!sat.validTime)
       wait(15);
   }
+  satStatus = 1;
   time(&t);
   printf("%s\r\n", ctime(&t));
+  if (pc.readable()) {
+    parseLaunchControlInput(pc, sat);
+  }
   while (true) {
     switch (flightMode) {
 

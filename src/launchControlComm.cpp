@@ -113,6 +113,11 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
       flightTransPeriod = numOpt;
     } else status = -2;
 
+  // HELLO command
+  } else if (strcmp(cmd, "HELLO")==0) {
+    s.printf("COMMAND MODULE READY\r\n");
+
+
   } else status = -1;
   if (status==0) {
     s.printf("OK\r\n");
@@ -147,7 +152,7 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat) {
 
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
   int status = 0;
-  s.printf("BAT=%.1f\r\n", batterySensor.read());
+  s.printf("BAT=%.2f\r\n", batterySensor.read()*13.29);
   s.printf("EXT_TEMP=%.1f\r\n", extTempSensor.read());
   s.printf("INT_TEMP=%.1f\r\n", intTempSensor.read());
   return status;
