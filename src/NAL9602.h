@@ -1,3 +1,11 @@
+/** Interface to NAL Research 9602-LP/A/AB satellite modems
+ *
+ *  @author John M. Larkin (jlarkin@whitworth.edu)
+ *  @version 0.1
+ *  @date 2017
+ *  @copyright MIT License
+ */
+
 #ifndef NAL9602_H
 #define NAL9602_H
 
@@ -6,6 +14,7 @@
 #include "SBDmessage.h"
 
 #define BUFFLENGTH 800
+#define LOG_BUFF_LENGTH 5000
 
 extern Serial pc;
 
@@ -36,13 +45,7 @@ struct BufferStatus
   int incomingMsgNum;
 };
 
-/** Interface to NAL Research 9602-LP/A/AB satellite modems
- *
- *  @author John M. Larkin (jlarkin@whitworth.edu)
- *  @version 0.1
- *  @date 2017
- *  @copyright GNU Public License
- */
+
 class NAL9602 {
 
 public:
@@ -127,6 +130,14 @@ public:
   */
   float altitude();
 
+  /** Return number of satellites used to get GPS fix
+  *
+  * Requires previous gpsUpdate()
+  *
+  * @returns number of satellites
+  */
+  int getSatsUsed();
+
   /** Set GPS mode
   *
   * @param mode gives operating environment for GPS
@@ -162,6 +173,15 @@ public:
   * Forward output of 9602 char-by-char to pc
   */
   void echoModem(int listenTime = 3);
+
+  /** Listen to 9602-LP
+  * Save output of 9602 to buffer
+  */
+  void saveStartLog(int listenTime = 15);
+
+  /** Print saved log to pc
+  */
+  void echoStartLog();
 
   /** Reads 9602 response until ERROR or OK found
   * @param verbose - if true, print to pc
@@ -199,6 +219,8 @@ public:
 private:
   GPSCoordinates coord;
   int incomingMessageLength;
+  char modemStartLog[LOG_BUFF_LENGTH];
+  unsigned int startLogLength;
 };
 
  #endif

@@ -10,7 +10,7 @@
  *  @author John M. Larkin (jlarkin@whitworth.edu)
  *  @version 0.1
  *  @date 2017
- *  @copyright GNU Public License
+ *  @copyright MIT License
  */
 
 extern TMP36 intTempSensor;
@@ -18,11 +18,16 @@ extern TMP36 extTempSensor;
 extern AnalogIn batterySensor;
 
 extern NAL9602 sat;
+extern Serial pc;
 
 extern int flightTransPeriod;
 extern int flightMode;
-extern Timer timeSinceTrans;
 extern int missionID;
+
+extern Timeout cmdSequence;
+extern Timer timeSinceTrans;
+extern Timer pauseTime;
+
 
 // Status LEDs
 extern DigitalOut powerStatus;
@@ -31,7 +36,9 @@ extern DigitalOut satStatus;
 extern DigitalOut podStatus;
 extern DigitalOut futureStatus;
 
-
+extern gpsModes currentGPSmode;
+extern float groundAltitude;
+extern float triggerHeight;
 
 enum launchControlCommands
 {
@@ -40,7 +47,7 @@ enum launchControlCommands
   satlink,
   podlink,
   radio,
-  sleepheight,
+  triggerheight,
   gpsdata,
   cmdsensors,
   poddata,
@@ -52,8 +59,16 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat);
 
 int sendGPStoLaunchControl(Serial &s, NAL9602 &sat);
 
-
-
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat);
+
+void updateStatusLED();
+
+int changeModeToPending(Serial &s, NAL9602 &sat);
+
+int changeModeToLab(Serial &s, NAL9602 &sat);
+
+int changeModeToFlight(Serial &s, NAL9602 &sat);
+
+void shutdownBT();
 
 #endif

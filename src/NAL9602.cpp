@@ -17,6 +17,9 @@ NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin,
   messageAvailable = false;
   validTime = false;
   verboseLogging = false;
+  gpsStatus = false;
+  iridiumStatus = false;
+  startLogLength = 0;
 
   // Set modem baud rate
   modem.baud(19200);
@@ -206,6 +209,12 @@ float NAL9602::altitude() {
   return coord.getAltitude();
 }
 
+// Status: Ready for testing
+int NAL9602::getSatsUsed() {
+  return coord.satUsed;
+};
+
+
 // Status: Lab tested with 9602-A
 void NAL9602::setModeGPS(gpsModes mode) {
   modem.printf("AT+PNAV=%d\r",mode);
@@ -263,7 +272,7 @@ bool NAL9602::syncTime() {
   t.tm_year = year - 1900; // Years since 1900 is required
   scanToEnd();
   if (verboseLogging)
-    pc.printf("UTC Date: %d-%d-%d\r\n", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
+    pc.printf("UTC Date: %d-%d-%d\t", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
 
   // Get UTC time from GPS
   modem.printf("AT+PT\r");
@@ -374,6 +383,24 @@ void NAL9602::echoModem(int listenTime) {
       i = i - j;
       j = 0;
     }
+  }
+}
+
+void NAL9602::saveStartLog(int listenTime) {
+  Timer t;
+  startLogLength = 0;
+  t.start();
+  while (t<listenTime) {
+    while ((modem.readable()) && (startLogLength < LOG_BUFF_LENGTH)) {
+      modemStartLog[startLogLength] = modem.getc();
+      startLogLength++;
+    }
+  }
+}
+
+void NAL9602::echoStartLog() {
+  for (unsigned int i = 0; i < startLogLength; i++) {
+    pc.putc(modemStartLog[i]);
   }
 }
 

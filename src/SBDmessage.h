@@ -1,4 +1,12 @@
-#ifndef SBDmessage_H
+/** Whitworth Near Space SBD Message object
+ *
+ *  @author John M. Larkin (jlarkin@whitworth.edu)
+ *  @version 0.1
+ *  @date 2017
+ *  @copyright MIT License
+ */
+
+ #ifndef SBDmessage_H
 #define SBDmessage_H
 
 #include "GPSCoordinates.h"
@@ -9,13 +17,6 @@
 #define POD_LENGTH 255
 #define MAXPODS 6
 
-/** Whitworth Near Space SBD Message object
- *
- *  @author John M. Larkin (jlarkin@whitworth.edu)
- *  @version 0.1
- *  @date 2017
- *  @copyright GNU Public License
- */
 class SBDmessage {
 
 public:

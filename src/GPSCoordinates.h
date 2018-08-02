@@ -8,7 +8,7 @@
  * @author John M. Larkin (jlarkin@whitworth.edu)
  * @version 0.1
  * @date 2017
- * @copyright GNU Public License
+ * @copyright MIT License
  */
 
 class GPSCoordinates {
