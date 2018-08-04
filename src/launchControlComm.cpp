@@ -98,13 +98,13 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
       if (flightMode<2) {
-        status = changeModeToPending(pc, sat);
+        status = changeModeToPending(sat);
       } else {
         status = -3;
       }
     } else if (strcmp(strOpt,"OFF")==0) {
       if (flightMode<2) {
-        status = changeModeToLab(pc, sat);
+        status = changeModeToLab(s, sat);
       } else {
         status = -3;
       }
@@ -163,7 +163,7 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat) {
 // Status: Lab tested with 9602-A
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
   int status = 0;
-  s.printf("BAT=%.2f\r\n", batterySensor.read()*13.29);
+  s.printf("BAT=%.2f\r\n", getBatteryVoltage());
   s.printf("EXT_TEMP=%.1f\r\n", extTempSensor.read());
   s.printf("INT_TEMP=%.1f\r\n", intTempSensor.read());
   return status;
@@ -219,20 +219,17 @@ int changeModeToLab(Serial &s, NAL9602 &sat) {
 }
 
 // Status: Lab tested with 9602-A
-int changeModeToPending(Serial &s, NAL9602 &sat) {
+int changeModeToPending(NAL9602 &sat) {
   sat.verboseLogging = false;
   int status = 0;
   currentGPSmode = airborne_medium_dynamic;
-  printf("Setting GPS mode to airborne_medium_dynamic\r\n");
   sat.setModeGPS(currentGPSmode);
   wait(1);
   if (!sat.gpsStatus) {
-    printf("Turning on GPS\r\n");
     sat.gpsOn();  // Flight mode requires GPS
     wait(1);
   }
   if (!sat.iridiumStatus) {
-    printf("Turning on Iridium link\r\n");
     sat.satLinkOn();  // Flight mode requires sat
     wait(1);
   }
@@ -242,7 +239,6 @@ int changeModeToPending(Serial &s, NAL9602 &sat) {
     fix = sat.gpsUpdate();
     if (fix) fixSats = sat.getSatsUsed();
     if (fixSats<4) {
-      printf("Only %i satellites found\r\n", fixSats);
       wait(15);
     }
   }
@@ -251,7 +247,6 @@ int changeModeToPending(Serial &s, NAL9602 &sat) {
   timeSinceTrans.reset();
   timeSinceTrans.start();
   pauseTime.start();
-  printf("Done changing to flight mode 1\r\n");
   return status;
 }
 
@@ -261,19 +256,7 @@ int changeModeToFlight(Serial &s, NAL9602 &sat) {
   return status;
 }
 
-// Status: Lab tested with 9602-A
-void shutdownStep1() {
-  pc.printf(" K,\r\n");
-}
 
-// Status: Lab tested with 9602-A
-void shutdownStep2() {
-  pc.printf("Z\r\n");
-}
-
-// Status: Lab tested with 9602-A
-void shutdownBT() {
-  pc.printf("$$$");
-  cmdSequence.attach(&shutdownStep1, 1.5);
-  cmdSequence.attach(&shutdownStep2, 2.5);
-}
+float getBatteryVoltage() {
+  return batterySensor.read()*13.29;
+};

@@ -336,10 +336,12 @@ void NAL9602::loadPodData(int podID, char* data) {
 }
 
 // Status: Lab tested with 9602-A
-int NAL9602::setMessage() {
+int NAL9602::setMessage(float mission_id, int flightMode, float voltage, float intTemp, float extTemp) {
   char status[80];
   int err;
+  sbdMessage.setMissionID(mission_id, flightMode);
   sbdMessage.generateGPSBytes(coord);
+  sbdMessage.generateCommandModuleBytes(voltage, intTemp, extTemp);
   sbdMessage.generatePodBytes();
   int n = sbdMessage.msgLength;
   if (n > 340) {

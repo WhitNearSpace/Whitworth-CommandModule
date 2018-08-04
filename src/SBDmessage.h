@@ -29,9 +29,9 @@ public:
   /** Set mission ID
   *
   * @param missionID Mission ID number registered with server
-  *   Positive ID = archive. Negative ID = testing (not archived)
+  *   Positive ID = moving. Negative ID = on ground (pre or post flight)
   */
-  void setMissionID(int16_t missionID);
+  void setMissionID(int16_t missionID, int flightMode);
 
 
   /** Get ith byte of SBD Message

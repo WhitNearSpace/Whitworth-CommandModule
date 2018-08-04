@@ -19,19 +19,18 @@
 char versionString[] = "0.2";
 char dateString[] = "8/01/2018";
 
-Serial pc(p9,p10);
-NAL9602 sat(p28,p27);
-TMP36 intTempSensor(p18);
-TMP36 extTempSensor(p20);
-AnalogIn batterySensor(p19);
+// LPC1768 connections
+Serial bt(p9,p10);            // Bluetooth connection via RN-41
+NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
+TMP36 intTempSensor(p18);     // Internal temperature sensor
+TMP36 extTempSensor(p20);     // External temperature sensor
+AnalogIn batterySensor(p19);  // Command module battery monitor
+DigitalOut powerStatus(p24);  // red (command module powered)
+DigitalOut gpsStatus(p22);    // green (GPS unit powered)
+DigitalOut satStatus(p21);    // blue (Iridium radio powered)
+DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
+DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
 
-// Status LEDs
-DigitalOut powerStatus(p24);  // red
-DigitalOut gpsStatus(p22);    // green
-DigitalOut satStatus(p21);    // blue
-DigitalOut podStatus(p23);    // amber, clear
-DigitalOut futureStatus(p25); // amber, opaque (below switch)
-// futureStatus is currently used to indicate when parsing command from BT
 
 // Comm flags
 bool btFound = false;
@@ -52,13 +51,14 @@ Timer pauseTime;
 Timeout cmdSequence;
 
 int main() {
-  pc.baud(115200);
+  bt.baud(115200);
   NetworkRegistration regResponse;
   BufferStatus buffStatus;
 
   time_t t;
   int err;
   bool success;
+  bool gps_success;
   float currentAltitude;
 
   Ticker statusTicker;
@@ -87,7 +87,7 @@ int main() {
   satStatus = 0;
   podStatus = 0;
   pauseTime.start();
-  while (!pc.readable() && pauseTime < 60) {
+  while (!bt.readable() && pauseTime < 60) {
     futureStatus = 0;
     powerStatus = 1;
     wait(0.2);
@@ -113,14 +113,14 @@ int main() {
   powerStatus = 1;
 
   if (btFound) {
-    pc.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
-    pc.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
-    pc.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
-    pc.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+    bt.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+    bt.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
+    bt.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
+    bt.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
     sat.echoStartLog();
-    pc.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
-    pc.printf("Battery = %0.2f V\r\n", batterySensor*13.29);
-    pc.printf(" \r\nSynchronizing clock with satellites...\r\n");
+    bt.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+    bt.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
+    bt.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
 
   sat.verboseLogging = false;
@@ -132,12 +132,12 @@ int main() {
   }
   time(&t);
   if (btFound) {
-    pc.printf("%s\r\n", ctime(&t));
-    pc.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+    bt.printf("%s\r\n", ctime(&t));
+    bt.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
   }
 
-  if (pc.readable()) {
-    parseLaunchControlInput(pc, sat); // really should just be handshake detect but I'm lazy (for now)
+  if (bt.readable()) {
+    parseLaunchControlInput(bt, sat); // really should just be handshake detect but I'm lazy (for now)
   }
   statusTicker.attach(&updateStatusLED, 1.0);
 
@@ -149,9 +149,9 @@ int main() {
        *  Can be promoted to mode 1 by Launch Control
        ***********************************************************************/
       case 0:
-        if (pc.readable()) {
+        if (bt.readable()) {
           futureStatus = 1;
-          parseLaunchControlInput(pc, sat);
+          parseLaunchControlInput(bt, sat);
           futureStatus = 0;
         }
         break;
@@ -164,27 +164,53 @@ int main() {
        ***********************************************************************/
       case 1: // Flight mode, pre-liftoff
         if (timeSinceTrans > preTransPeriod) {
+          /********************************************************************
+           * Send SBD message
+           *******************************************************************/
+          // 1.  Reset transmission counter
           timeSinceTrans.reset();
-          /* carryout procedure for transmitting SBD */
-          pc.printf("This is when an SBD transmission would occur\r\n");
-        } else if (pauseTime > 15) {
+
+          // 2.  Clear the SBD message buffers
+          sat.clearBuffer(2);
+
+          // 3.  Are there pods that should be asked to send data?
+          //     If so, send data request to each pod.
+          //  >>> NOT YET IMPLEMENTED <<<
+
+          // 4.  Update GPS coordinates
+          gps_success = sat.gpsUpdate();
+
+          // 5.  Are there pods that should have sent data?
+          //     If so, load each pod's data into intermediate buffer
+          //  >>> NOT YET IMPLEMENTED <<<
+
+          // 6.  Generate SBD message and send to NAL 9602 message buffer
+          sat.setMessage(missionID, flightMode, getBatteryVoltage(), intTempSensor.read(), extTempSensor.read());
+
+          // 7.  Transmit SBD message
+          bt.printf("This is when an SBD transmission would occur\r\n");
+          // sat.transmitMessage();
+          /********************* END - Send SBD message ****************/
+
+        }
+        if (pauseTime > 15) {
           pauseTime.reset();
-          success = sat.gpsUpdate();
-          if (success) {
+          if (!gps_success)
+            gps_success = sat.gpsUpdate();
+          if (gps_success) {
             currentAltitude = sat.altitude();
             if (currentAltitude > (groundAltitude+triggerHeight)) {
-              pc.printf("Changing to flight mode 2\r\n");
-              changeModeToFlight(pc, sat);
+              bt.printf("Changing to flight mode 2\r\n");
+              changeModeToFlight(bt, sat);
             }
           }
         }
-        if (pc.readable()) {
+        if (bt.readable()) {
           futureStatus = 1;
-          parseLaunchControlInput(pc, sat);
+          parseLaunchControlInput(bt, sat);
           futureStatus = 0;
         }
-        wait(0.2);
-
+        gps_success = false;
         break;
 
       case 2: // Flight mode, moving!

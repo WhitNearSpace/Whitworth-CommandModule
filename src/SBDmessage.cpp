@@ -14,8 +14,12 @@ void SBDmessage::clearMessage() {
     sbd[i] = 0;
 }
 
-void SBDmessage::setMissionID(int16_t mission_id) {
-  storeInt16(0, mission_id);
+void SBDmessage::setMissionID(int16_t mission_id, int flightMode) {
+  if (flightMode==2) {
+    storeInt16(0, mission_id);
+  } else {
+    storeInt16(0, -mission_id);
+  }
 }
 
 // Status: Tested with terminal

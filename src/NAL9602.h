@@ -158,11 +158,6 @@ public:
   */
   void zeroMessageCounter();
 
-  /** Send SBD message from 9602 to ground station
-  * Also checks for incoming messages and loads one if available
-  */
-  int transmitMessage();
-
   /** Set the microcontroller real-time clock from GPS time
   *
   * @returns true if successful sync
@@ -214,7 +209,12 @@ public:
 
   /** Load outgoing message buffer
   */
-  int setMessage();
+  int setMessage(float mission_id, int flightMode, float voltage, float intTemp, float extTemp);
+
+  /** Send SBD message from 9602 to ground station
+  * Also checks for incoming messages and loads one if available
+  */
+  int transmitMessage();
 
 private:
   GPSCoordinates coord;

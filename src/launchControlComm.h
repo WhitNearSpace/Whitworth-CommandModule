@@ -2,6 +2,7 @@
 #define LAUNCH_CONTROL_COMM_H
 
 #include "mbed.h"
+#include "projectGlobals.h"
 #include "NAL9602.h"
 #include "TMP36.h"
 
@@ -13,13 +14,6 @@
  *  @copyright MIT License
  */
 
-extern TMP36 intTempSensor;
-extern TMP36 extTempSensor;
-extern AnalogIn batterySensor;
-
-extern NAL9602 sat;
-extern Serial pc;
-
 extern int flightTransPeriod;
 extern int flightMode;
 extern int missionID;
@@ -27,14 +21,6 @@ extern int missionID;
 extern Timeout cmdSequence;
 extern Timer timeSinceTrans;
 extern Timer pauseTime;
-
-
-// Status LEDs
-extern DigitalOut powerStatus;
-extern DigitalOut gpsStatus;
-extern DigitalOut satStatus;
-extern DigitalOut podStatus;
-extern DigitalOut futureStatus;
 
 extern gpsModes currentGPSmode;
 extern float groundAltitude;
@@ -61,9 +47,11 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat);
 
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat);
 
+float getBatteryVoltage();
+
 void updateStatusLED();
 
-int changeModeToPending(Serial &s, NAL9602 &sat);
+int changeModeToPending(NAL9602 &sat);
 
 int changeModeToLab(Serial &s, NAL9602 &sat);
 
