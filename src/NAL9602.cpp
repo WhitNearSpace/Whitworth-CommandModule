@@ -129,27 +129,27 @@ bool NAL9602::gpsUpdate() {
    coord.setLatitudeDegMin(deg, min, decmin, strcmp(dir,"North")==0);
   } else valid = false;
   if (verboseLogging)
-    pc.printf("Latitude = %d:%d.%d %s\r\n", deg, min, decmin, dir);
+    printf("Latitude = %d:%d.%d %s\r\n", deg, min, decmin, dir);
 
   argFilled = modem.scanf(" Longitude=%d:%d.%d %s",&deg,&min,&decmin,&dir);
   if (argFilled == 4) {
    coord.setLongitudeDegMin(deg, min, decmin, strcmp(dir,"East")==0);
   } else valid = false;
   if (verboseLogging)
-    pc.printf("Longitude = %d:%d.%d %s\r\n", deg, min, decmin, dir);
+    printf("Longitude = %d:%d.%d %s\r\n", deg, min, decmin, dir);
 
   argFilled = modem.scanf(" Altitude=%f meters",&alt);
   if (argFilled == 1)
     coord.setAltitude(alt);
   else valid = false;
   if (verboseLogging)
-    pc.printf("Altitude = %.2f\r\n", alt);
+    printf("Altitude = %.2f\r\n", alt);
 
   modem.scanf("%79s", &fixString);
   if (strcmp(invalidString,fixString)==0)
     valid = false;
   if (verboseLogging)
-    pc.printf("%s\r\n", fixString);
+    printf("%s\r\n", fixString);
   while (strcmp(fixString,"Satellites")!=0) {
     modem.scanf("%79s", &fixString);
   }
@@ -157,7 +157,7 @@ bool NAL9602::gpsUpdate() {
   argFilled = modem.scanf(" Used=%d", &num);
   coord.satUsed = num;
   if (verboseLogging)
-    pc.printf("Satellites = %d\r\n", num);
+    printf("Satellites = %d\r\n", num);
   if (valid) {
     coord.syncTime = receivedTime;
     coord.positionFix = valid;
@@ -182,13 +182,13 @@ bool NAL9602::gpsUpdate() {
     coord.setHeading((int)h);
   };
   if (verboseLogging)
-    pc.printf("Ground velocity = %f km/h, %.2f deg from north\r\n", v, h);
+    printf("Ground velocity = %f km/h, %.2f deg from north\r\n", v, h);
   argFilled = modem.scanf(" Vertical Velocity=%f m/s", &v);
   if (argFilled == 1) {
     coord.setVerticalVelocity(v);
   }
   if (verboseLogging)
-    pc.printf("Vertical velocity = %.2f m/s\r\n", v);
+    printf("Vertical velocity = %.2f m/s\r\n", v);
   scanToEnd();
 
   return valid;
@@ -272,7 +272,7 @@ bool NAL9602::syncTime() {
   t.tm_year = year - 1900; // Years since 1900 is required
   scanToEnd();
   if (verboseLogging)
-    pc.printf("UTC Date: %d-%d-%d\t", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
+    printf("UTC Date: %d-%d-%d\t", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
 
   // Get UTC time from GPS
   modem.printf("AT+PT\r");
@@ -281,7 +281,7 @@ bool NAL9602::syncTime() {
   modem.scanf(" UTC Time=%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec);
   scanToEnd();
   if (verboseLogging)
-    pc.printf("UTC Time: %.2d:%.2d:%.2d\r\n\r\n", t.tm_hour, t.tm_min, t.tm_sec);
+    printf("UTC Time: %.2d:%.2d:%.2d\r\n\r\n", t.tm_hour, t.tm_min, t.tm_sec);
 
   // Set RTC and associated flag
   set_time(mktime(&t));
@@ -336,10 +336,10 @@ void NAL9602::loadPodData(int podID, char* data) {
 }
 
 // Status: Lab tested with 9602-A
-int NAL9602::setMessage(float mission_id, int flightMode, float voltage, float intTemp, float extTemp) {
+int NAL9602::setMessage(float voltage, float intTemp, float extTemp) {
   char status[80];
   int err;
-  sbdMessage.setMissionID(mission_id, flightMode);
+  sbdMessage.setMissionID(missionID, flight.mode);
   sbdMessage.generateGPSBytes(coord);
   sbdMessage.generateCommandModuleBytes(voltage, intTemp, extTemp);
   sbdMessage.generatePodBytes();
@@ -364,7 +364,7 @@ int NAL9602::setMessage(float mission_id, int flightMode, float voltage, float i
 }
 
 // Status: Lab tested with 9602-A
-void NAL9602::echoModem(int listenTime) {
+void NAL9602::echoModem(Serial &s, int listenTime) {
   Timer t;
   char buff[BUFFLENGTH];
   unsigned int i = 0;
@@ -377,7 +377,7 @@ void NAL9602::echoModem(int listenTime) {
     }
     while ((j<i) && (!modem.readable())) {
       if (verboseLogging)
-        pc.putc(buff[j]);
+        s.putc(buff[j]);
       j++;
     }
     for (unsigned int k = 0; k<j; k++) {
@@ -400,9 +400,9 @@ void NAL9602::saveStartLog(int listenTime) {
   }
 }
 
-void NAL9602::echoStartLog() {
+void NAL9602::echoStartLog(Serial &s) {
   for (unsigned int i = 0; i < startLogLength; i++) {
-    pc.putc(modemStartLog[i]);
+    s.putc(modemStartLog[i]);
   }
 }
 
@@ -412,9 +412,9 @@ void NAL9602::scanToEnd(bool verbose) {
   modem.scanf("%79s", &status);
   while (((strcmp(status,"ERROR")!=0))&&(strcmp(status,"OK")!=0)) {
     if (verbose)
-      pc.printf("\t%s\r\n", status);
+      printf("\t%s\r\n", status);
     modem.scanf("%79s", &status);
   }
   if (verbose)
-    pc.printf("\tStatus = %s\r\n", status);
+    printf("\tStatus = %s\r\n", status);
 }

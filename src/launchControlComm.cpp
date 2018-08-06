@@ -8,7 +8,6 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   int numOpt, numOpt2, numOpt3, numOpt4, numOpt5, numOpt6;
   int status = 0;
   s.scanf("%79s", &cmd);
-  printf("%s\r\n", cmd);
   // GPS commands
   if (strcmp(cmd,"GPS")==0) {
     s.scanf(" %79s", &strOpt);
@@ -49,7 +48,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   } else if (strcmp(cmd,"TRIGGERHEIGHT")==0) {
     s.scanf(" %i", &numOpt);
     if ((numOpt>10) && (numOpt<200)) {
-      triggerHeight = (float)(numOpt);
+      flight.triggerHeight = (float)(numOpt);
     } else {
       status = -2;
     }
@@ -69,11 +68,9 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // MISSIONID command
   } else if (strcmp(cmd,"MISSIONID")==0) {
-    printf("Found MISSIONID command\r\n");
     s.scanf(" %i", &numOpt);
     if ((numOpt>0) && (numOpt<32768)) {
-      missionID = numOpt;
-      printf("The ID is %i\r\n", missionID);
+      sat.missionID = numOpt;
     } else {
       status = -2;
     }
@@ -92,19 +89,19 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // FLIGHT_MODE commands
   } else if (strcmp(cmd,"FLIGHT_MODE?")==0) {
-    s.printf("MODE=%i\r\n", flightMode);
+    s.printf("MODE=%i\r\n", flight.mode);
 
   } else if (strcmp(cmd,"FLIGHT_MODE")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
-      if (flightMode<2) {
+      if (flight.mode<2) {
         status = changeModeToPending(sat);
       } else {
         status = -3;
       }
     } else if (strcmp(strOpt,"OFF")==0) {
-      if (flightMode<2) {
-        status = changeModeToLab(s, sat);
+      if (flight.mode<2) {
+        status = changeModeToLab(sat);
       } else {
         status = -3;
       }
@@ -114,7 +111,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   } else if (strcmp(cmd,"TRANSPERIOD")==0) {
     s.scanf(" %i", &numOpt);
     if ((numOpt>=15) && (numOpt<=90)) {
-      flightTransPeriod = numOpt;
+      flight.transPeriod = numOpt;
     } else status = -2;
 
   // HELLO command
@@ -171,8 +168,7 @@ int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
 
 // Status: Lab tested with 9602-A
 void updateStatusLED() {
-  int status = 0;
-  switch (flightMode) {
+  switch (flight.mode) {
     case 0:
       powerStatus = 1;
       gpsStatus = sat.gpsStatus;
@@ -207,13 +203,10 @@ void updateStatusLED() {
   }
 }
 
-int changeModeToLab(Serial &s, NAL9602 &sat) {
+int changeModeToLab(NAL9602 &sat) {
   int status = 0;
-  currentGPSmode = stationary;
-  sat.setModeGPS(currentGPSmode);
-  flightMode = 0;
-  timeSinceTrans.stop();
-  timeSinceTrans.reset();
+  sat.setModeGPS(stationary);
+  flight.mode = 0;
   sat.verboseLogging = true;
   return status;
 }
@@ -222,8 +215,7 @@ int changeModeToLab(Serial &s, NAL9602 &sat) {
 int changeModeToPending(NAL9602 &sat) {
   sat.verboseLogging = false;
   int status = 0;
-  currentGPSmode = airborne_medium_dynamic;
-  sat.setModeGPS(currentGPSmode);
+  sat.setModeGPS(pedestrian);
   wait(1);
   if (!sat.gpsStatus) {
     sat.gpsOn();  // Flight mode requires GPS
@@ -242,17 +234,20 @@ int changeModeToPending(NAL9602 &sat) {
       wait(15);
     }
   }
-  groundAltitude = sat.altitude();
-  flightMode = 1;
+  flight.groundAltitude = sat.altitude();
+  flight.mode = 1;
   timeSinceTrans.reset();
   timeSinceTrans.start();
-  pauseTime.start();
+  checkTime.reset();
+  checkTime.start();
   return status;
 }
 
-int changeModeToFlight(Serial &s, NAL9602 &sat) {
+int changeModeToFlight(RN41 &bt, NAL9602 &sat) {
   int status = 0;
-  flightMode = 2;
+  sat.setModeGPS(airborne_medium_dynamic);
+  flight.mode = 2;
+  bt.initiateShutdown();
   return status;
 }
 

@@ -12,11 +12,13 @@
 #include "mbed.h"
 #include "GPSCoordinates.h"
 #include "SBDmessage.h"
+#include "FlightParameters.h"
+
+// FlightParameter structure
+extern FlightParameters flight;  // needs to be global because used in ISR
 
 #define BUFFLENGTH 800
 #define LOG_BUFF_LENGTH 5000
-
-extern Serial pc;
 
 /** Operating modes for GPS receiver
 */
@@ -58,6 +60,7 @@ public:
   bool verboseLogging;
   bool gpsStatus;
   bool iridiumStatus;
+  int missionID;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *
@@ -165,21 +168,21 @@ public:
   bool syncTime();
 
   /** Listen to 9602-LP
-  * Forward output of 9602 char-by-char to pc
+  * Forward output of 9602 char-by-char to Serial connection
   */
-  void echoModem(int listenTime = 3);
+  void echoModem(Serial &s, int listenTime = 3);
 
   /** Listen to 9602-LP
   * Save output of 9602 to buffer
   */
   void saveStartLog(int listenTime = 15);
 
-  /** Print saved log to pc
+  /** Print saved log to Serial connection
   */
-  void echoStartLog();
+  void echoStartLog(Serial &s);
 
   /** Reads 9602 response until ERROR or OK found
-  * @param verbose - if true, print to pc
+  * @param verbose - if true, print to "console"
   */
   void scanToEnd(bool verbose = false);
 
@@ -209,7 +212,7 @@ public:
 
   /** Load outgoing message buffer
   */
-  int setMessage(float mission_id, int flightMode, float voltage, float intTemp, float extTemp);
+  int setMessage(float voltage, float intTemp, float extTemp);
 
   /** Send SBD message from 9602 to ground station
   * Also checks for incoming messages and loads one if available
