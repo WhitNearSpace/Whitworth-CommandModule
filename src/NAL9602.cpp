@@ -218,7 +218,7 @@ int NAL9602::getSatsUsed() {
 // Status: Lab tested with 9602-A
 void NAL9602::setModeGPS(gpsModes mode) {
   modem.printf("AT+PNAV=%d\r",mode);
-  scanToEnd();
+  scanToEnd(verboseLogging);
 }
 
 // Status: Lab tested with 9602-A
@@ -251,7 +251,7 @@ int NAL9602::transmitMessage() {
   }
   if (queueLength == 0)
     ringAlert = false;
-  scanToEnd();
+  scanToEnd(verboseLogging);
   return outgoingStatus;
 }
 
@@ -358,7 +358,7 @@ int NAL9602::setMessage(float voltage, float intTemp, float extTemp) {
     unsigned short checksum = sbdMessage.generateChecksum();
     modem.printf("%c%c", (char)(checksum/256), (char)(checksum%256));
     modem.scanf(" %d",&err);
-    scanToEnd();
+    scanToEnd(verboseLogging);
     return err;
   }
 }
