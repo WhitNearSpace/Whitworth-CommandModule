@@ -11,31 +11,43 @@
  */
 
 // Status:  Ready for testing
-char send_SBD_message(NAL9602 &sat) {
+char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   char successFlags = 0;
   bool gps_success;
+  bool msg_err;
+  bool transmit_success;
 
-  // 1.  Clear the SBD message buffers
-  sat.clearBuffer(2);
-
-  // 2.  Are there pods that should be asked to send data?
+  // 1.  Are there pods that should be asked to send data?
   //     If so, send data request to each pod.
   //  >>> NOT YET IMPLEMENTED <<<
 
-  // 3.  Update GPS coordinates
+  // 2.  Update GPS coordinates
+  bt.modem.printf("Updating GPS...");
   gps_success = sat.gpsUpdate();
   if (gps_success) successFlags = successFlags | 0x1;
+  if (gps_success) {
+    bt.modem.printf("success\r\n");
+  } else {
+    bt.modem.printf("failure\r\n");
+  }
 
-  // 4.  Are there pods that should have sent data?
+  // 3.  Are there pods that should have sent data?
   //     If so, load each pod's data into intermediate buffer
   //  >>> NOT YET IMPLEMENTED <<<
 
-  // 5.  Generate SBD message and send to NAL 9602 message buffer
-  sat.setMessage(getBatteryVoltage(), intTempSensor.read(), extTempSensor.read());
+  // 4.  Generate SBD message and send to NAL 9602 message buffer
+  bt.modem.printf("Setting message...");
+  msg_err = sat.setMessage(getBatteryVoltage(), 0, 0);
+  if (!msg_err) successFlags = successFlags | 0x2;
+  if (!msg_err) {
+    bt.modem.printf("success\r\n");
+  } else {
+    bt.modem.printf("failure\r\n");
+  }
 
-  // 6.  Transmit SBD message
-  printf("This is when an SBD transmission would occur\r\n");
-  // sat.transmitMessage();
-
+  // 5.  Transmit SBD message
+  transmit_success = sat.transmitMessage();
+  if(transmit_success) successFlags = successFlags | 0x4;
+  bt.modem.printf("Transmit code: %i\r\n", transmit_success);
   return successFlags;
 }

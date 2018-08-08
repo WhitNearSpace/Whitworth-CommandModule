@@ -13,6 +13,7 @@
 #include "mbed.h"
 
 // LPC1768 connections
+extern Serial pc;
 extern NAL9602 sat;                  // NAL 9602 modem interface object
 extern RN41 bt;                    // Bluetooth connection via RN-41
 extern TMP36 intTempSensor;          // Internal temperature sensor

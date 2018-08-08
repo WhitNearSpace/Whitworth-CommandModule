@@ -23,6 +23,7 @@ char versionString[] = "0.2";
 char dateString[] = "8/01/2018";
 
 // LPC1768 connections
+Serial pc(USBTX,USBRX);       // Serial connection via USB
 RN41 bt(p9,p10);            // Bluetooth connection via RN-41
 NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
 TMP36 intTempSensor(p18);     // Internal temperature sensor
@@ -56,6 +57,8 @@ int main() {
   BufferStatus buffStatus;
   int err;
   bool success;
+
+  sat.verboseLogging = false;
 
   // Satellite modem startup
   pauseTime.start();
@@ -101,13 +104,14 @@ int main() {
     bt.modem.printf("Near Space Command Module, v. %s (%s)\r\n", versionString, dateString);
     bt.modem.printf("John M. Larkin, Department of Engineering and Physics\r\nWhitworth University\r\n\r\n");
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+    bt.modem.printf("NAL 9602 power-up log:\r\n");
     sat.echoStartLog(bt.modem);
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
 
-  sat.verboseLogging = false;
+  sat.gpsNoSleep();
   sat.setModeGPS(stationary);
   while (!sat.validTime) {
     sat.syncTime();
@@ -124,6 +128,7 @@ int main() {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
   }
   statusTicker.attach(&updateStatusLED, 1.0);
+  sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
 
   while (true) {
     switch (flight.mode) {
@@ -147,9 +152,28 @@ int main() {
        *  Can be promoted to mode 2 if altitude crosses threshold
        ***********************************************************************/
       case 1: // Flight mode, pre-liftoff
-        if (timeSinceTrans > PRE_TRANS_PERIOD) {
+        if (timeSinceTrans > PRE_TRANS_PERIOD/5) {
           timeSinceTrans.reset();
-          sbdFlags = send_SBD_message(sat);
+          int bars = sat.signalQuality();
+          bt.modem.printf("Satellite bars: %i\r\n", bars);
+          if (bars) {
+            regResponse = sat.joinNetwork();
+            bt.modem.printf("Reg status: %i\r\n", regResponse.status);
+            bt.modem.printf("Reg error: %i\r\n", regResponse.err);
+            buffStatus = sat.getBufferStatus();
+            bt.modem.printf("Message in outgoing buffer?: %i\r\n", buffStatus.outgoingFlag);
+            bt.modem.printf("MOMSN: %i\r\n", buffStatus.outgoingMsgNum);
+            bt.modem.printf("Message in incoming buffer?: %i\r\n", buffStatus.incomingFlag);
+            bt.modem.printf("MTMSN: %i\r\n", buffStatus.incomingMsgNum);
+            bt.modem.printf("Ring alert?: %i\r\n", buffStatus.raFlag);
+            bt.modem.printf("Number of incoming messages waiting: %i\r\n", buffStatus.numMsgWaiting);
+          }
+          // bt.modem.printf("Preparing to send SBD...\r\n");
+          // sbdFlags = send_SBD_message(bt, sat);
+          // bt.modem.printf("SBD transmission flags:\r\n");
+          // bt.modem.printf("\t GPS - %i\r\n", sbdFlags & 0x1);
+          // bt.modem.printf("\t MSG - %i\r\n", sbdFlags & 0x2);
+          // bt.modem.printf("\t TRANS - %i\r\n", sbdFlags & 0x4);
         }
         if (pauseTime > 15) {
           pauseTime.reset();

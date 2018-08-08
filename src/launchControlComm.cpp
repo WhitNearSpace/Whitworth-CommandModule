@@ -253,5 +253,9 @@ int changeModeToFlight(RN41 &bt, NAL9602 &sat) {
 
 
 float getBatteryVoltage() {
-  return batterySensor.read()*13.29;
+  float sum = 0;
+  int n = 10;
+  for (int i = 0; i < n; i++)
+    sum = sum + batterySensor.read();
+  return sum/n*13.29;
 };

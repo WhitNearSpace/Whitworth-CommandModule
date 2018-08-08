@@ -17,6 +17,8 @@
 // FlightParameter structure
 extern FlightParameters flight;  // needs to be global because used in ISR
 
+extern Serial pc;
+
 #define BUFFLENGTH 800
 #define LOG_BUFF_LENGTH 5000
 
@@ -45,6 +47,8 @@ struct BufferStatus
   int outgoingMsgNum;
   int incomingFlag;
   int incomingMsgNum;
+  int raFlag;
+  int numMsgWaiting;
 };
 
 
@@ -86,6 +90,10 @@ public:
   /** Turn off GPS receiver
   */
   void gpsOff();
+
+  /** GPS doesn't go to sleep
+  */
+  void gpsNoSleep();
 
   /** Check for incoming message
   *
@@ -154,6 +162,13 @@ public:
   */
   void setModeGPS(gpsModes mode);
 
+  void getGpsModes();
+
+  void dumpManufacturer();
+  void dumpModel();
+  void dumpRevision();
+  void dumpIMEI();
+
   /** Reset outgoing message counter
   *
   * Sets the MOMSN (mobile originated message sequence number)
@@ -218,6 +233,8 @@ public:
   * Also checks for incoming messages and loads one if available
   */
   int transmitMessage();
+
+  int transmitMessageWithRingAlert();
 
 private:
   GPSCoordinates coord;
