@@ -106,18 +106,19 @@ int main() {
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
     bt.modem.printf("NAL 9602 power-up log:\r\n");
     sat.echoStartLog(bt.modem);
+    sat.gpsNoSleep();
+    sat.setModeGPS(stationary);
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
-
-  sat.gpsNoSleep();
-  sat.setModeGPS(stationary);
+  sat.verboseLogging = true;
   while (!sat.validTime) {
     sat.syncTime();
     if (!sat.validTime)
       wait(15);
   }
+  sat.verboseLogging = false;
   time(&t);
   if (bt.connected) {
     bt.modem.printf("%s (UTC)\r\n", ctime(&t));
@@ -157,9 +158,9 @@ int main() {
           int bars = sat.signalQuality();
           bt.modem.printf("Satellite bars: %i\r\n", bars);
           if (bars) {
-            regResponse = sat.joinNetwork();
-            bt.modem.printf("Reg status: %i\r\n", regResponse.status);
-            bt.modem.printf("Reg error: %i\r\n", regResponse.err);
+            // regResponse = sat.joinNetwork();
+            // bt.modem.printf("Reg status: %i\r\n", regResponse.status);
+            // bt.modem.printf("Reg error: %i\r\n", regResponse.err);
             sbdFlags = send_SBD_message(bt, sat);
             buffStatus = sat.getBufferStatus();
             bt.modem.printf("Message in outgoing buffer?: %i\r\n", buffStatus.outgoingFlag);

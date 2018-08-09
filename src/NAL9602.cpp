@@ -334,7 +334,7 @@ bool NAL9602::syncTime() {
   t.tm_year = year - 1900; // Years since 1900 is required
   scanToEnd();
   if (verboseLogging)
-    printf("UTC Date: %d-%d-%d\t", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
+    pc.printf("UTC: %d-%d-%d\t", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
 
   // Get UTC time from GPS
   modem.printf("AT+PT\r");
@@ -342,8 +342,8 @@ bool NAL9602::syncTime() {
   modem.scanf(" +PT:");
   modem.scanf(" UTC Time=%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec);
   scanToEnd();
-  // if (verboseLogging)
-  //   printf("UTC Time: %.2d:%.2d:%.2d\r\n\r\n", t.tm_hour, t.tm_min, t.tm_sec);
+  if (verboseLogging)
+    pc.printf("%.2d:%.2d:%.2d\r\n\r\n", t.tm_hour, t.tm_min, t.tm_sec);
 
   // Set RTC and associated flag
   set_time(mktime(&t));
