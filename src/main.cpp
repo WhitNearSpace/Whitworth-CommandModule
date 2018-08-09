@@ -153,29 +153,28 @@ int main() {
        *  Can be promoted to mode 2 if altitude crosses threshold
        ***********************************************************************/
       case 1: // Flight mode, pre-liftoff
-        if (timeSinceTrans > PRE_TRANS_PERIOD) {
-          timeSinceTrans.reset();
+        if (timeSinceTrans > PRE_TRANS_PERIOD/2) {
+
           int bars = sat.signalQuality();
           bt.modem.printf("Satellite bars: %i\r\n", bars);
           if (bars) {
+            timeSinceTrans.reset();
             // regResponse = sat.joinNetwork();
             // bt.modem.printf("Reg status: %i\r\n", regResponse.status);
             // bt.modem.printf("Reg error: %i\r\n", regResponse.err);
             sbdFlags = send_SBD_message(bt, sat);
-            buffStatus = sat.getBufferStatus();
-            bt.modem.printf("Message in outgoing buffer?: %i\r\n", buffStatus.outgoingFlag);
-            bt.modem.printf("MOMSN: %i\r\n", buffStatus.outgoingMsgNum);
-            bt.modem.printf("Message in incoming buffer?: %i\r\n", buffStatus.incomingFlag);
-            bt.modem.printf("MTMSN: %i\r\n", buffStatus.incomingMsgNum);
-            bt.modem.printf("Ring alert?: %i\r\n", buffStatus.raFlag);
-            bt.modem.printf("Number of incoming messages waiting: %i\r\n", buffStatus.numMsgWaiting);
+            bt.modem.printf("SBD transmission flags:\r\n");
+            bt.modem.printf("\t GPS - %i\r\n", sbdFlags & 0x1);
+            bt.modem.printf("\t MSG - %i\r\n", sbdFlags & 0x2);
+            bt.modem.printf("\t TRANS - %i\r\n", sbdFlags & 0x4);
+            // buffStatus = sat.getBufferStatus();
+            // bt.modem.printf("Message in outgoing buffer?: %i\r\n", buffStatus.outgoingFlag);
+            // bt.modem.printf("MOMSN: %i\r\n", buffStatus.outgoingMsgNum);
+            // bt.modem.printf("Message in incoming buffer?: %i\r\n", buffStatus.incomingFlag);
+            // bt.modem.printf("MTMSN: %i\r\n", buffStatus.incomingMsgNum);
+            // bt.modem.printf("Ring alert?: %i\r\n", buffStatus.raFlag);
+            // bt.modem.printf("Number of incoming messages waiting: %i\r\n", buffStatus.numMsgWaiting);
           }
-          // bt.modem.printf("Preparing to send SBD...\r\n");
-          // sbdFlags = send_SBD_message(bt, sat);
-          // bt.modem.printf("SBD transmission flags:\r\n");
-          // bt.modem.printf("\t GPS - %i\r\n", sbdFlags & 0x1);
-          // bt.modem.printf("\t MSG - %i\r\n", sbdFlags & 0x2);
-          // bt.modem.printf("\t TRANS - %i\r\n", sbdFlags & 0x4);
         }
         if (pauseTime > 15) {
           pauseTime.reset();
