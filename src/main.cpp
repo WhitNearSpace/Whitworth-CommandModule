@@ -152,7 +152,7 @@ int main() {
        *  Can be promoted to mode 2 if altitude crosses threshold
        ***********************************************************************/
       case 1: // Flight mode, pre-liftoff
-        if (timeSinceTrans > PRE_TRANS_PERIOD/5) {
+        if (timeSinceTrans > PRE_TRANS_PERIOD) {
           timeSinceTrans.reset();
           int bars = sat.signalQuality();
           bt.modem.printf("Satellite bars: %i\r\n", bars);
@@ -160,6 +160,7 @@ int main() {
             regResponse = sat.joinNetwork();
             bt.modem.printf("Reg status: %i\r\n", regResponse.status);
             bt.modem.printf("Reg error: %i\r\n", regResponse.err);
+            sbdFlags = send_SBD_message(bt, sat);
             buffStatus = sat.getBufferStatus();
             bt.modem.printf("Message in outgoing buffer?: %i\r\n", buffStatus.outgoingFlag);
             bt.modem.printf("MOMSN: %i\r\n", buffStatus.outgoingMsgNum);
