@@ -34,6 +34,8 @@ DigitalOut gpsStatus(p22);    // green (GPS unit powered)
 DigitalOut satStatus(p21);    // blue (Iridium radio powered)
 DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
 DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
+LocalFileSystem local("local");  // file system on microcontroller flash
+
 
 // Flight state and settings
 struct FlightParameters flight;
@@ -154,27 +156,7 @@ int main() {
        ***********************************************************************/
       case 1: // Flight mode, pre-liftoff
         if (timeSinceTrans > PRE_TRANS_PERIOD/2) {
-
-          int bars = sat.signalQuality();
-          bt.modem.printf("Satellite bars: %i\r\n", bars);
-          if (bars) {
-            timeSinceTrans.reset();
-            // regResponse = sat.joinNetwork();
-            // bt.modem.printf("Reg status: %i\r\n", regResponse.status);
-            // bt.modem.printf("Reg error: %i\r\n", regResponse.err);
-            sbdFlags = send_SBD_message(bt, sat);
-            bt.modem.printf("SBD transmission flags:\r\n");
-            bt.modem.printf("\t GPS - %i\r\n", sbdFlags & 0x1);
-            bt.modem.printf("\t MSG - %i\r\n", sbdFlags & 0x2);
-            bt.modem.printf("\t TRANS - %i\r\n", sbdFlags & 0x4);
-            // buffStatus = sat.getBufferStatus();
-            // bt.modem.printf("Message in outgoing buffer?: %i\r\n", buffStatus.outgoingFlag);
-            // bt.modem.printf("MOMSN: %i\r\n", buffStatus.outgoingMsgNum);
-            // bt.modem.printf("Message in incoming buffer?: %i\r\n", buffStatus.incomingFlag);
-            // bt.modem.printf("MTMSN: %i\r\n", buffStatus.incomingMsgNum);
-            // bt.modem.printf("Ring alert?: %i\r\n", buffStatus.raFlag);
-            // bt.modem.printf("Number of incoming messages waiting: %i\r\n", buffStatus.numMsgWaiting);
-          }
+          sbdFlags = send_SBD_message(bt, sat);
         }
         if (pauseTime > 15) {
           pauseTime.reset();

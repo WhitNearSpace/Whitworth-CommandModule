@@ -6,6 +6,10 @@
 #include "TMP36.h"
 #include "launchControlComm.h"
 
+extern LocalFileSystem local;
+
+#define DEV_MODE_LOGGING
+
 char send_SBD_message(RN41 &bt, NAL9602 &sat);
 
 #endif

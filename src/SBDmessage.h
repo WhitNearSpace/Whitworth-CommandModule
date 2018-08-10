@@ -87,6 +87,16 @@ public:
 public:
   char podLengths[MAXPODS];
   int msgLength;
+  int missionID;
+  bool doneLoading;
+  bool requestedPodData;
+  bool updatedGPS;
+  bool messageLoaded;
+  int selectedPod;
+  Timer timeSincePodRequest;
+  Timer timeSinceSbdRequest;
+  float sbdTransTimeout;
+
 
 
 private:
