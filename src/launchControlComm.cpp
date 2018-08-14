@@ -70,7 +70,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   } else if (strcmp(cmd,"MISSIONID")==0) {
     s.scanf(" %i", &numOpt);
     if ((numOpt>0) && (numOpt<32768)) {
-      sat.missionID = numOpt;
+      sat.sbdMessage.missionID = numOpt;
     } else {
       status = -2;
     }

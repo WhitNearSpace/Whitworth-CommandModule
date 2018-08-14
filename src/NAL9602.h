@@ -64,7 +64,6 @@ public:
   bool verboseLogging;
   bool gpsStatus;
   bool iridiumStatus;
-  int missionID;
 
   /** Create a NAL9602 interface object connected to the specified pins
   *

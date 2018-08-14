@@ -437,8 +437,8 @@ int NAL9602::setMessage(float voltage, float intTemp, float extTemp) {
   char status[80];
   int err;
   pc.printf("Inside setMessage\r\n");
-  pc.printf("Setting mission ID with %i and %i\r\n", missionID, flight.mode);
-  sbdMessage.setMissionID(missionID, flight.mode);
+  pc.printf("Setting mission ID with %i and %i\r\n", sbdMessage.missionID, flight.mode);
+  sbdMessage.setMissionID(flight.mode);
   pc.printf("Generating GPS bytes\r\n");
   sbdMessage.generateGPSBytes(coord);
   pc.printf("Generating command module bytes\r\n");

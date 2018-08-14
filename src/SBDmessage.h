@@ -31,7 +31,7 @@ public:
   * @param missionID Mission ID number registered with server
   *   Positive ID = moving. Negative ID = on ground (pre or post flight)
   */
-  void setMissionID(int16_t missionID, int flightMode);
+  void setMissionID(int flightMode);
 
 
   /** Get ith byte of SBD Message
