@@ -288,33 +288,21 @@ int NAL9602::transmitMessage() {
   if (queueLength == 0)
     ringAlert = false;
   scanToEnd();
-  switch (outgoingStatus) {
-    case 0:
-      pc.printf("No outgoing message to send\r\n");
-      break;
-    case 1:
-      pc.printf("Outgoing message sent with MOMSN %i\r\n", outgoingMessageCount);
-      break;
-    case 2:
-      pc.printf("Error while attempting to send message\r\n");
-      break;
-    default:
-      pc.printf("Outgoing status code: %i\r\n", outgoingStatus);
-  }
-  switch (incomingStatus) {
-    case 0:
-      pc.printf("No incoming message to receive\r\n");
-      break;
-    case 1:
-      pc.printf("Incoming message received with MTMSN %i\r\n", incomingMessageCount);
-      break;
-    case 2:
-      pc.printf("Error while attempting to receive a message\r\n");
-      break;
-    default:
-      pc.printf("Incoming status code: %i\r\n", incomingStatus);
-  }
-  return outgoingStatus;
+  /*** Status codes from NAL 9602 for SBDI command
+   * Outgoing (MO) codes
+   *   0 = no SBD message to send from the 9602
+   *   1 = SBD message successfully sent
+   *   2 = error occurred while attempting to send SBD message
+   *
+   * Incoming (MT) codes
+   *   0 = no SBD message to receive
+   *   1 = SBD message successfully received
+   *   2 = error while attempting to receive a message
+   *
+   * I combined the two codes so single integer can return this info
+   *   returned code = (MO code) + 4*(MT code)
+   ***/
+  return outgoingStatus + 4*incomingStatus;
 }
 
 // Status: Lab tested with 9602-A

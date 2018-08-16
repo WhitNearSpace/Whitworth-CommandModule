@@ -92,6 +92,7 @@ public:
   bool requestedPodData;
   bool updatedGPS;
   bool messageLoaded;
+  bool startSend;
   int selectedPod;
   Timer timeSincePodRequest;
   Timer timeSinceSbdRequest;

@@ -236,6 +236,7 @@ int changeModeToPending(NAL9602 &sat) {
   }
   flight.groundAltitude = sat.altitude();
   flight.mode = 1;
+  sat.sbdMessage.sbdTransTimeout = 0.9*PRE_TRANS_PERIOD;
   timeSinceTrans.reset();
   timeSinceTrans.start();
   checkTime.reset();
@@ -245,9 +246,10 @@ int changeModeToPending(NAL9602 &sat) {
 
 int changeModeToFlight(RN41 &bt, NAL9602 &sat) {
   int status = 0;
-  sat.setModeGPS(airborne_medium_dynamic);
+  sat.setModeGPS(airborne_low_dynamic);
   flight.mode = 2;
   bt.initiateShutdown();
+  sat.sbdMessage.sbdTransTimeout = 0.9*flight.transPeriod;
   return status;
 }
 

@@ -47,6 +47,8 @@ Timer checkTime;       // timer in pending mode to do checks increasing altitude
 int main() {
   time_t t;  // Time structure
   bool gps_success;  // Was GPS update a success?
+  bool transmit_success;  // Was SBD transmit a success?
+  bool transmit_timeout;  // Did the SBD transmission fail to complete in time?
   char sbdFlags; // byte of flags (bit 0 = gps, 1 = lo )
   Ticker statusTicker;  // Ticker controlling update of status LEDs
   Timer pauseTime;  // wait for things to respond but if not, move on
@@ -149,14 +151,21 @@ int main() {
         break;
 
       /************************************************************************
-       *  Flight mode, pre-liftoff (SBD transmissions, but not too frequent)
+       *  Launch pad mode, pre-liftoff (SBD transmissions, but not too frequent)
        *
        *  Can be demoted to mode 0 by Launch Control
        *  Can be promoted to mode 2 if altitude crosses threshold
        ***********************************************************************/
-      case 1: // Flight mode, pre-liftoff
-        if (timeSinceTrans > PRE_TRANS_PERIOD/2) {
+      case 1:
+        if (timeSinceTrans > PRE_TRANS_PERIOD) {
           sbdFlags = send_SBD_message(bt, sat);
+          gps_success = sbdFlags & 1;
+          transmit_success = sbdFlags & 16;
+          transmit_timeout = sbdFlags & 128;
+          if (transmit_success || transmit_timeout) {
+            timeSinceTrans.reset();
+            sat.sbdMessage.startSend = true;
+          }
         }
         if (pauseTime > 15) {
           pauseTime.reset();
@@ -164,7 +173,7 @@ int main() {
             gps_success = sat.gpsUpdate();
           if (gps_success) {
             if (sat.altitude() > (flight.groundAltitude + flight.triggerHeight)) {
-              bt.modem.printf("Changing to flight mode 2.  Good bye!\r\n");
+              bt.modem.printf("Changing to flight mode. Good bye!\r\n");
               changeModeToFlight(bt, sat);
             }
           }
@@ -175,12 +184,13 @@ int main() {
           futureStatus = 0;
         }
         gps_success = false;
+        transmit_success = false;
         break;
 
       case 2: // Flight mode, moving!
         break;
 
-      case 3: // Flight mode, landed
+      case 3: // Landed mode
         break;
     }
   }

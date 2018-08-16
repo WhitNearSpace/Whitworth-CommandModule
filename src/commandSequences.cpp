@@ -21,6 +21,13 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   time_t t;  // Time structure
   FILE* fp;
 
+  // 0.  Start the clock the first time
+  if (sat.sbdMessage.startSend) {
+    sat.sbdMessage.timeSinceSbdRequest.reset();
+    sat.sbdMessage.timeSinceSbdRequest.start();
+    sat.sbdMessage.startSend = false;
+  }
+
   // 1.  Check to see if pod data needs to be requested
   while (!(sat.sbdMessage.doneLoading || sat.sbdMessage.requestedPodData)) {
     // Is this pod expected to send data?  If not, move to next pod
@@ -44,6 +51,12 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
       if (sat.sbdMessage.selectedPod == MAXPODS) {
         sat.sbdMessage.selectedPod = 0;
         sat.sbdMessage.doneLoading = true;
+        #ifdef DEV_MODE_LOGGING
+          time(&t);
+          fp = fopen("/local/devLog.txt", "a");
+          fprintf(fp, "%s \t Done loading pod data\r\n", ctime(&t));
+          fclose(fp);
+        #endif
       }
     }
   }
@@ -82,23 +95,47 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   //     the SBD message been loaded into the NAL 9602 buffer if not already done.
   if ((sat.sbdMessage.doneLoading) && (sat.sbdMessage.updatedGPS) && (!sat.sbdMessage.messageLoaded)) {
     msg_err = sat.setMessage(getBatteryVoltage(), 0, 0);
-    if (!msg_err) sat.sbdMessage.messageLoaded = true;
+    if (!msg_err) {
+      sat.sbdMessage.messageLoaded = true;
+      #ifdef DEV_MODE_LOGGING
+        time(&t);
+        fp = fopen("/local/devLog.txt", "a");
+        fprintf(fp, "%s \t SBD message loaded into buffer\r\n", ctime(&t));
+        fclose(fp);
+      #endif
+    }
   }
   if (sat.sbdMessage.messageLoaded) successFlags = successFlags | 4;
 
   // 5.  If message is loaded, check for satellite signal
   if (sat.sbdMessage.messageLoaded) {
     bars = sat.signalQuality();
-    if (bars) successFlags = successFlags | 8;
+    if (bars) {
+      successFlags = successFlags | 8;
+      #ifdef DEV_MODE_LOGGING
+        time(&t);
+        fp = fopen("/local/devLog.txt", "a");
+        fprintf(fp, "%s \t Signal quality = %i\r\n", ctime(&t), bars);
+        fclose(fp);
+      #endif
+    }
   }
 
   // 6.  If message is loaded and have good satellite signal, transmit message
   if (bars) {
     transmit_code = sat.transmitMessage();
-    if (transmit_code == 0) transmit_success = true;
+    if (transmit_code & 1) {
+      transmit_success = true;
+      #ifdef DEV_MODE_LOGGING
+        time(&t);
+        fp = fopen("/local/devLog.txt", "a");
+        fprintf(fp, "%s \t SBD message transmitted\r\n", ctime(&t));
+        fclose(fp);
+      #endif
+    }
   }
 
-  // 7.  If transmission was successful, flag and reset.  If not, check for timeout.
+  // 7.  If transmission was successful, flag and reset.  If not, check for problems.
   if (transmit_success) {
     successFlags = successFlags | 16;
     sat.sbdMessage.doneLoading = false;
@@ -108,13 +145,21 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
     sat.sbdMessage.selectedPod = 0;
     sat.sbdMessage.timeSinceSbdRequest.stop();
   } else {
-    // Log a failure message for post-flight diagnostics
-    time(&t);
-    fp = fopen("/local/log.txt", "a");
-    fprintf(fp, "%s \t SBD transmit failure, code = %i\r\n", ctime(&t), transmit_code);
+    // If message loaded and no successful transmission then there is a problem
+    if (sat.sbdMessage.messageLoaded) {
+      // Log a failure message for post-flight diagnostics
+      time(&t);
+      fp = fopen("/local/log.txt", "a");
+      fprintf(fp, "%s \t SBD transmit failure, signal quality = %i", ctime(&t), bars);
+      if (bars) {
+        fprintf(fp, ", transmit code = %i", transmit_code);
+      }
+      fprintf(fp,"\r\n");
+      fclose(fp);
+    }
 
+    // Tried to transmit for too long and failed
     if (sat.sbdMessage.timeSinceSbdRequest > sat.sbdMessage.sbdTransTimeout) {
-      // Tried to transmit for too long and failed
       successFlags = successFlags | 128;  // Actually a failure flag bit
       fprintf(fp, "%s \t SBD timeout\r\n", ctime(&t));
       sat.sbdMessage.doneLoading = false;

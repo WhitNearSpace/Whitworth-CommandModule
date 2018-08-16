@@ -4,9 +4,9 @@
 /** FlightParameters structure
  *  int mode - has four different settings
  *    0: lab mode - do not transmit SBD
- *    1: preflight mode - transmit SBD at 5 minute intervals, wait for launch
+ *    1: launch pad mode - transmit SBD at 5 minute intervals, wait for launch
  *    2: flight mode - transmit SBD at specified interval (15-75 s), wait for land
- *    3: postflight mode - transmit SBD at 10 minute intervals
+ *    3: landed mode - transmit SBD at 10 minute intervals
  *
  *  int transPeriod - seconds between SBD transmissions in active flight
  *
@@ -16,7 +16,7 @@
  *  float groundAltitude - altitude detected when change from mode 0 to mode 1
  */
 
-#define PRE_TRANS_PERIOD 300
+#define PRE_TRANS_PERIOD 150 // change to 300 for actual use
 #define POST_TRANS_PERIOD 600
 
 struct FlightParameters {
