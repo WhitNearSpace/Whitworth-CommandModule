@@ -288,21 +288,13 @@ int NAL9602::transmitMessage() {
   if (queueLength == 0)
     ringAlert = false;
   scanToEnd();
-  /*** Status codes from NAL 9602 for SBDI command
-   * Outgoing (MO) codes
+  /* Outgoing (MO) codes
    *   0 = no SBD message to send from the 9602
    *   1 = SBD message successfully sent
    *   2 = error occurred while attempting to send SBD message
    *
-   * Incoming (MT) codes
-   *   0 = no SBD message to receive
-   *   1 = SBD message successfully received
-   *   2 = error while attempting to receive a message
-   *
-   * I combined the two codes so single integer can return this info
-   *   returned code = (MO code) + 4*(MT code)
-   ***/
-  return outgoingStatus + 4*incomingStatus;
+   */
+  return outgoingStatus;
 }
 
 // Status: Lab tested with 9602-A

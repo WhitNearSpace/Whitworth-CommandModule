@@ -5,7 +5,7 @@ SBDmessage::SBDmessage() {
   clearMessage();
   for (int i = 0; i < MAXPODS; i++)
     podLengths[i] = 0;
-  startSend = true;
+  attemptingSend = false;
 }
 
 SBDmessage::~SBDmessage() {

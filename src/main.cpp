@@ -128,6 +128,7 @@ int main() {
     bt.modem.printf("%s (UTC)\r\n", ctime(&t));
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
   }
+  srand(time(NULL)); // seed the random number generator with the current time (used for transmit retry delay)
 
   if (bt.modem.readable()) {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
@@ -157,17 +158,20 @@ int main() {
        *  Can be promoted to mode 2 if altitude crosses threshold
        ***********************************************************************/
       case 1:
-        if (timeSinceTrans > PRE_TRANS_PERIOD) {
+        if ((timeSinceTrans > PRE_TRANS_PERIOD) || (sat.sbdMessage.attemptingSend)) {
+          // If haven't already started send process, reset clock
+          if (!sat.sbdMessage.attemptingSend) {
+            timeSinceTrans.reset();
+          }
           sbdFlags = send_SBD_message(bt, sat);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
           if (transmit_success || transmit_timeout) {
-            timeSinceTrans.reset();
-            sat.sbdMessage.startSend = true;
+            sat.sbdMessage.attemptingSend = false;
           }
         }
-        if (pauseTime > 15) {
+        if ((pauseTime > 15) && (!sat.sbdMessage.attemptingSend)) {
           pauseTime.reset();
           if (!gps_success)
             gps_success = sat.gpsUpdate();

@@ -13,19 +13,20 @@
 // Status:  Ready for testing
 char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   char successFlags = 0;
-  bool gps_success = false;
+  bool gps_fix = false;
   bool msg_err = false;
   bool transmit_success = false;
   int transmit_code;
   int bars = 0;
+  int numSats = 0;
   time_t t;  // Time structure
   FILE* fp;
 
   // 0.  Start the clock the first time
-  if (sat.sbdMessage.startSend) {
+  if (!sat.sbdMessage.attemptingSend) {
     sat.sbdMessage.timeSinceSbdRequest.reset();
     sat.sbdMessage.timeSinceSbdRequest.start();
-    sat.sbdMessage.startSend = false;
+    sat.sbdMessage.attemptingSend = true;
   }
 
   // 1.  Check to see if pod data needs to be requested
@@ -64,20 +65,30 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
 
   // 2.  Have the GPS coordinates been updated for this SBD?  If not, update.
   if (!sat.sbdMessage.updatedGPS) {
-    gps_success = sat.gpsUpdate();
-    if (gps_success) {
-      sat.sbdMessage.updatedGPS = true;
-      #ifdef DEV_MODE_LOGGING
-        time(&t);
-        fp = fopen("/local/devLog.txt", "a");
-        fprintf(fp, "%s \t GPS update success\r\n", ctime(&t));
-        fclose(fp);
-      #endif
+    gps_fix = sat.gpsUpdate();
+    if (gps_fix) {
+      numSats = sat.getSatsUsed();
+      if (numSats>3) {
+        sat.sbdMessage.updatedGPS = true;
+        #ifdef DEV_MODE_LOGGING
+          time(&t);
+          fp = fopen("/local/devLog.txt", "a");
+          fprintf(fp, "%s \t GPS update success with %i satellites\r\n", ctime(&t), numSats);
+          fclose(fp);
+        #endif
+      } else {
+        #ifdef DEV_MODE_LOGGING
+          time(&t);
+          fp = fopen("/local/devLog.txt", "a");
+          fprintf(fp, "%s \t GPS update failed, only %i satellites used\r\n", ctime(&t), numSats);
+          fclose(fp);
+        #endif
+      }
     } else {
       // Log a failure message for post-flight diagnostics
       time(&t);
       fp = fopen("/local/log.txt", "a");
-      fprintf(fp, "%s \t GPS update failed\r\n", ctime(&t));
+      fprintf(fp, "%s \t GPS - no fix\r\n", ctime(&t));
       fclose(fp);
     }
   }
@@ -107,22 +118,8 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   }
   if (sat.sbdMessage.messageLoaded) successFlags = successFlags | 4;
 
-  // 5.  If message is loaded, check for satellite signal
+  // 5.  If message is loaded, attempt transmission
   if (sat.sbdMessage.messageLoaded) {
-    bars = sat.signalQuality();
-    if (bars) {
-      successFlags = successFlags | 8;
-      #ifdef DEV_MODE_LOGGING
-        time(&t);
-        fp = fopen("/local/devLog.txt", "a");
-        fprintf(fp, "%s \t Signal quality = %i\r\n", ctime(&t), bars);
-        fclose(fp);
-      #endif
-    }
-  }
-
-  // 6.  If message is loaded and have good satellite signal, transmit message
-  if (bars) {
     transmit_code = sat.transmitMessage();
     if (transmit_code & 1) {
       transmit_success = true;
@@ -135,7 +132,7 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
     }
   }
 
-  // 7.  If transmission was successful, flag and reset.  If not, check for problems.
+  // 6.  If transmission was successful, flag and reset.  If not, check for problems.
   if (transmit_success) {
     successFlags = successFlags | 16;
     sat.sbdMessage.doneLoading = false;
@@ -149,6 +146,7 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
     if (sat.sbdMessage.messageLoaded) {
       // Log a failure message for post-flight diagnostics
       time(&t);
+      bars = sat.signalQuality();
       fp = fopen("/local/log.txt", "a");
       fprintf(fp, "%s \t SBD transmit failure, signal quality = %i", ctime(&t), bars);
       if (bars) {
@@ -156,6 +154,9 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
       }
       fprintf(fp,"\r\n");
       fclose(fp);
+      if (bars) {
+        wait(5*(float)rand()/RAND_MAX);  // if transmit failed, wait 0-5 sec (per manufacturer)
+      }
     }
 
     // Tried to transmit for too long and failed

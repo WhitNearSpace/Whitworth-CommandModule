@@ -203,6 +203,7 @@ void updateStatusLED() {
   }
 }
 
+// Status: Lab tested with 9602-A
 int changeModeToLab(NAL9602 &sat) {
   int status = 0;
   sat.setModeGPS(stationary);
@@ -231,7 +232,7 @@ int changeModeToPending(NAL9602 &sat) {
     fix = sat.gpsUpdate();
     if (fix) fixSats = sat.getSatsUsed();
     if (fixSats<4) {
-      wait(15);
+      wait(5);
     }
   }
   flight.groundAltitude = sat.altitude();
