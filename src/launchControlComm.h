@@ -32,4 +32,6 @@ int changeModeToLab(NAL9602 &sat);
 
 int changeModeToFlight(RN41 &bt, NAL9602 &sat);
 
+int changeModeToLanded(RN41 &bt, NAL9602 &sat);
+
 #endif

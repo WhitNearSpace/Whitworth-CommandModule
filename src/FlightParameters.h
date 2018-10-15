@@ -16,7 +16,7 @@
  *  float groundAltitude - altitude detected when change from mode 0 to mode 1
  */
 
-#define PRE_TRANS_PERIOD 150 // change to 300 for actual use
+#define PRE_TRANS_PERIOD 300
 #define POST_TRANS_PERIOD 600
 
 struct FlightParameters {

@@ -105,7 +105,7 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   // 4.  Has GPS been updated and pod data received?  If so, it is time to load
   //     the SBD message been loaded into the NAL 9602 buffer if not already done.
   if ((sat.sbdMessage.doneLoading) && (sat.sbdMessage.updatedGPS) && (!sat.sbdMessage.messageLoaded)) {
-    msg_err = sat.setMessage(getBatteryVoltage(), 0, 0);
+    msg_err = sat.setMessage(getBatteryVoltage(), intTempSensor.read(), extTempSensor.read());
     if (!msg_err) {
       sat.sbdMessage.messageLoaded = true;
       #ifdef DEV_MODE_LOGGING

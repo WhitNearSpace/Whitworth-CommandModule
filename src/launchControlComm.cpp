@@ -254,6 +254,14 @@ int changeModeToFlight(RN41 &bt, NAL9602 &sat) {
   return status;
 }
 
+int changeModeToLanded(RN41 &bt, NAL9602 &sat) {
+  int status = 0;
+  sat.setModeGPS(pedestrian);
+  flight.mode = 3;
+  sat.sbdMessage.sbdTransTimeout = 0.9*POST_TRANS_PERIOD;
+  return status;
+}
+
 
 float getBatteryVoltage() {
   float sum = 0;

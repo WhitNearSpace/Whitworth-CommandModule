@@ -140,6 +140,14 @@ public:
   */
   float altitude();
 
+  /** Return vertical velocity
+  *
+  * Requires previous gpsUpdate()
+  *
+  * @returns vertical velocity in m/s
+  */
+  float verticalVelocity();
+
   /** Return number of satellites used to get GPS fix
   *
   * Requires previous gpsUpdate()

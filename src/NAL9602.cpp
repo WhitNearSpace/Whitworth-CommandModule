@@ -216,6 +216,11 @@ float NAL9602::altitude() {
 }
 
 // Status: Ready for testing
+float NAL9602::verticalVelocity() {
+  return coord.getRawVerticalVelocity()*0.1;
+}
+
+// Status: Ready for testing
 int NAL9602::getSatsUsed() {
   return coord.satUsed;
 };

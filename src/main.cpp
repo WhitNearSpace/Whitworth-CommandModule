@@ -19,8 +19,8 @@
  *  0.2 - Interface with Launch Control app and more testing
  */
 
-char versionString[] = "0.2";
-char dateString[] = "8/01/2018";
+char versionString[] = "0.3";
+char dateString[] = "10/14/2018";
 
 // LPC1768 connections
 Serial pc(USBTX,USBRX);       // Serial connection via USB
@@ -52,6 +52,7 @@ int main() {
   char sbdFlags; // byte of flags (bit 0 = gps, 1 = lo )
   Ticker statusTicker;  // Ticker controlling update of status LEDs
   Timer pauseTime;  // wait for things to respond but if not, move on
+  int landedIndicator = 0; // number of times has been flagged as landed
 
   flight.mode = 0;            // flag for mode (0 = lab)
   flight.transPeriod = 60;    // time between SBD transmissions (in s) during flight
@@ -192,9 +193,66 @@ int main() {
         break;
 
       case 2: // Flight mode, moving!
+        if ((timeSinceTrans > flight.transPeriod) || (sat.sbdMessage.attemptingSend)) {
+          // If haven't already started send process, reset clock
+          if (!sat.sbdMessage.attemptingSend) {
+            timeSinceTrans.reset();
+          }
+          sbdFlags = send_SBD_message(bt, sat);
+          gps_success = sbdFlags & 1;
+          transmit_success = sbdFlags & 16;
+          transmit_timeout = sbdFlags & 128;
+          if (transmit_success || transmit_timeout) {
+            sat.sbdMessage.attemptingSend = false;
+          }
+        }
+        if ((pauseTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+          pauseTime.reset();
+          if (!gps_success)
+            gps_success = sat.gpsUpdate();
+          if (gps_success) {
+            if ((sat.altitude() < 5000) && (sat.altitude() > 0)) {
+              if (fabs(sat.verticalVelocity())<1.0)
+                landedIndicator++;
+              if (landedIndicator > 40)
+                changeModeToLanded(bt, sat);
+            }
+          }
+        }
         break;
 
       case 3: // Landed mode
+        if ((timeSinceTrans > POST_TRANS_PERIOD) || (sat.sbdMessage.attemptingSend)) {
+          // If haven't already started send process, reset clock
+          if (!sat.sbdMessage.attemptingSend) {
+            timeSinceTrans.reset();
+          }
+          sbdFlags = send_SBD_message(bt, sat);
+          gps_success = sbdFlags & 1;
+          transmit_success = sbdFlags & 16;
+          transmit_timeout = sbdFlags & 128;
+          if (transmit_success || transmit_timeout) {
+            sat.sbdMessage.attemptingSend = false;
+          }
+        }
+        if ((pauseTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+          pauseTime.reset();
+          if (getBatteryVoltage()<6.4) {
+            // Battery is running low so shut down systems
+            sat.satLinkOff();
+            sat.gpsOff();
+            statusTicker.detach();
+            powerStatus = 0;
+            gpsStatus = 0;
+            satStatus = 0;
+            podStatus = 0;
+            timeSinceTrans.stop();
+            pauseTime.stop();
+            while (1) {
+              sleep();
+            }
+          }
+        }
         break;
     }
   }
