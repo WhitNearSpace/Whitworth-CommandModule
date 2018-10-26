@@ -56,7 +56,7 @@ int main() {
 
   flight.mode = 0;            // flag for mode (0 = lab)
   flight.transPeriod = 60;    // time between SBD transmissions (in s) during flight
-  flight.triggerHeight = 100; // trigger active flight if this many meters above ground
+  flight.triggerHeight = 40; // trigger active flight if this many meters above ground
 
   NetworkRegistration regResponse;
   BufferStatus buffStatus;
@@ -172,8 +172,8 @@ int main() {
             sat.sbdMessage.attemptingSend = false;
           }
         }
-        if ((pauseTime > 15) && (!sat.sbdMessage.attemptingSend)) {
-          pauseTime.reset();
+        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+          checkTime.reset();
           if (!gps_success)
             gps_success = sat.gpsUpdate();
           if (gps_success) {
@@ -206,15 +206,15 @@ int main() {
             sat.sbdMessage.attemptingSend = false;
           }
         }
-        if ((pauseTime > 15) && (!sat.sbdMessage.attemptingSend)) {
-          pauseTime.reset();
+        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+          checkTime.reset();
           if (!gps_success)
             gps_success = sat.gpsUpdate();
           if (gps_success) {
             if ((sat.altitude() < 5000) && (sat.altitude() > 0)) {
               if (fabs(sat.verticalVelocity())<1.0)
                 landedIndicator++;
-              if (landedIndicator > 40)
+              if (landedIndicator > 2*(flight.transPeriod/15))
                 changeModeToLanded(bt, sat);
             }
           }
@@ -235,8 +235,8 @@ int main() {
             sat.sbdMessage.attemptingSend = false;
           }
         }
-        if ((pauseTime > 15) && (!sat.sbdMessage.attemptingSend)) {
-          pauseTime.reset();
+        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+          checkTime.reset();
           if (getBatteryVoltage()<6.4) {
             // Battery is running low so shut down systems
             sat.satLinkOff();
@@ -247,7 +247,7 @@ int main() {
             satStatus = 0;
             podStatus = 0;
             timeSinceTrans.stop();
-            pauseTime.stop();
+            checkTime.stop();
             while (1) {
               sleep();
             }
