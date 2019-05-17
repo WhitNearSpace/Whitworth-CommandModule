@@ -10,13 +10,14 @@
 /** Command Module Microcontroller
  *
  * @author John M. Larkin (jlarkin@whitworth.edu)
- * @version 0.2
+ * @version 1.0.0
  * @date 2018
  * @copyright MIT License
  *
  * Version History:
  *  0.1 - Terminal emulation mode only for testing of NAL9602 library
  *  0.2 - Interface with Launch Control app and more testing
+ *  1.0 - Successful first flight
  */
 
 char versionString[] = "0.3";
