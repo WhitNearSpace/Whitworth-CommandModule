@@ -1,6 +1,6 @@
 #include "SBDmessage.h"
 
-// Status: Tested with terminal
+// Status: Flight tested
 SBDmessage::SBDmessage() {
   clearMessage();
   for (int i = 0; i < MAXPODS; i++)
@@ -17,6 +17,7 @@ void SBDmessage::clearMessage() {
     sbd[i] = 0;
 }
 
+// Status: Flight tested
 void SBDmessage::setMissionID(int flightMode) {
   if (flightMode==2) {
     storeInt16(0, missionID);
@@ -25,7 +26,7 @@ void SBDmessage::setMissionID(int flightMode) {
   }
 }
 
-// Status: Tested with terminal
+// Status: Flight tested
 char SBDmessage::getByte(int i) {
   char val;
   if ((i>=0)&&(i<SBD_LENGTH))
@@ -34,7 +35,7 @@ char SBDmessage::getByte(int i) {
   return val;
 }
 
-// Status: Tested with terminal
+// Status: Flight tested
 void SBDmessage::generateGPSBytes(GPSCoordinates &gps) {
   int heading = gps.getHeading();
   bool headPos = true;
@@ -82,7 +83,7 @@ void SBDmessage::generateCommandModuleBytes(float voltage, float intTemp, float 
   storeInt16(25, (int16_t)(extTemp*100));
 }
 
-// Status: Tested with terminal
+// Status: Flight tested
 unsigned short SBDmessage::generateChecksum() {
   unsigned short cs = 0;
   for (int i = 0; i<msgLength; i++) {
