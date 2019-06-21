@@ -1,6 +1,8 @@
-#include "mbed.h"
+#include <mbed.h>
+#include <rtos.h>
 #include "NAL9602.h"
 #include "RN41.h"
+#include <CM_to_FC.h>
 #include "TMP36.h"
 #include "launchControlComm.h"
 #include "FlightParameters.h"
@@ -20,13 +22,15 @@
  *  1.0 - Successful first flight
  */
 
-char versionString[] = "0.3";
-char dateString[] = "10/14/2018";
+char versionString[] = "2.0.0-p1";
+char dateString[] = "6/21/2019";
 
 // LPC1768 connections
 Serial pc(USBTX,USBRX);       // Serial connection via USB
 RN41 bt(p9,p10);            // Bluetooth connection via RN-41
 NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
+CM_to_FC podRadio(p13, p14);  // XBee 802.15.4 (2.4 GHz) interface for pod communications
+DigitalOut podRadioWake(p15); // Signal XBee to move from sleep to wake mode
 TMP36 intTempSensor(p18);     // Internal temperature sensor
 TMP36 extTempSensor(p20);     // External temperature sensor
 AnalogIn batterySensor(p19);  // Command module battery monitor
