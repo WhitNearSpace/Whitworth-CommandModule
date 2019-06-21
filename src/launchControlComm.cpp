@@ -173,14 +173,18 @@ void updateStatusLED() {
       powerStatus = 1;
       gpsStatus = sat.gpsStatus;
       satStatus = sat.iridiumStatus;
-      podStatus = 0; // link to pods is not yet implemented so must be off
+      podStatus = (podRadio.directory_length()>0); // Have any pods accepted invite?
       //futureStatus = 0; // off for now...
       break;
     case 1:
       powerStatus = !powerStatus;
       gpsStatus = sat.gpsStatus && (!powerStatus);
       satStatus = sat.iridiumStatus && (!powerStatus);
-      podStatus = 0; // link to pods is not yet implemented so must be off
+      if (podRadio.link_count()>0) {
+        if (podRadio.link_count() == podRadio.registry_length()) {
+          podStatus = 1;  // Solid if all registred pods linked
+        } else podStatus = !powerStatus; // Blink if some but all registered pods are linked
+      } else podStatus = 0;  // Off if no registered pods are linked
       //futureStatus = 0; // off for now...
       break;
     case 2:
@@ -194,7 +198,11 @@ void updateStatusLED() {
       powerStatus = !powerStatus;
       gpsStatus = sat.gpsStatus && powerStatus;
       satStatus = sat.iridiumStatus && powerStatus;
-      podStatus = 0; // link to pods is not yet implemented so must be off
+      if (podRadio.link_count()>0) {
+        if (podRadio.link_count() == podRadio.registry_length()) {
+          podStatus = 1;  // Solid if all registred pods linked
+        } else podStatus = powerStatus; // Blink if some but all registered pods are linked
+      } else podStatus = 0;  // Off if no registered pods are linked
       //futureStatus = 0; // off for now...
       break;
     default:
