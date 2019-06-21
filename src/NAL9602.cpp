@@ -508,6 +508,8 @@ void NAL9602::echoStartLog(Serial &s) {
   for (unsigned int i = 0; i < startLogLength; i++) {
     s.putc(modemStartLog[i]);
   }
+  if (startLogLength == LOG_BUFF_LENGTH)
+    s.printf("\r\nStart output exceeded %d character buffer\r\n", LOG_BUFF_LENGTH);
 }
 
 // Status: Lab tested with 9602-A

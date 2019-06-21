@@ -20,7 +20,7 @@ extern FlightParameters flight;  // needs to be global because used in ISR
 extern Serial pc;
 
 #define BUFFLENGTH 800
-#define LOG_BUFF_LENGTH 5000
+#define LOG_BUFF_LENGTH 800
 
 /** Operating modes for GPS receiver
 */
