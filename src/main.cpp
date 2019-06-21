@@ -49,6 +49,7 @@ struct FlightParameters flight;
 Timer timeSinceTrans;  // time since last SBD transmission
 Timer checkTime;       // timer in pending mode to do checks increasing altitude
 
+
 int main() {
   time_t t;  // Time structure
   bool gps_success;  // Was GPS update a success?
@@ -57,11 +58,13 @@ int main() {
   char sbdFlags; // byte of flags (bit 0 = gps, 1 = lo )
   Ticker statusTicker;  // Ticker controlling update of status LEDs
   Timer pauseTime;  // wait for things to respond but if not, move on
+  Timer podInviteTime;   // time since last pod invitation sent
   int landedIndicator = 0; // number of times has been flagged as landed
 
   flight.mode = 0;            // flag for mode (0 = lab)
   flight.transPeriod = 60;    // time between SBD transmissions (in s) during flight
   flight.triggerHeight = 40; // trigger active flight if this many meters above ground
+  const float podInviteInterval = 60;  // Send invitations to pods (when in lab or launch mode) at this interval (in seconds)
 
   NetworkRegistration regResponse;
   BufferStatus buffStatus;
@@ -142,6 +145,8 @@ int main() {
   statusTicker.attach(&updateStatusLED, 1.0);
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
 
+  podInviteTime.start();
+
   while (true) {
     switch (flight.mode) {
       /************************************************************************
@@ -154,6 +159,10 @@ int main() {
           futureStatus = 1;
           parseLaunchControlInput(bt.modem, sat);
           futureStatus = 0;
+        }
+        if (podInviteTime > podInviteInterval) {
+          podInviteTime.reset();
+          podRadio.invite();
         }
         break;
 
@@ -192,6 +201,11 @@ int main() {
           futureStatus = 1;
           parseLaunchControlInput(bt.modem, sat);
           futureStatus = 0;
+        }
+        if (podInviteTime > podInviteInterval) {
+          podInviteTime.reset();
+          podRadio.invite_registry();
+          podRadio.test_all_clocks();
         }
         gps_success = false;
         transmit_success = false;
