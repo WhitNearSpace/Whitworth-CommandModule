@@ -30,10 +30,21 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   } else if (strcmp(cmd,"PODLINK")==0) {
     s.scanf(" %79s", &strOpt);
     if (strcmp(strOpt,"ON")==0) {
-      // Not yet implemented
+      char ni[21];
+      char len;
+      for (int i = 0; i < MAXPODS; i++) {
+        s.scanf("POD %20s = %i", &ni, &len);
+        podRadio.add_registry_entry(ni, len);
+      }
     } else if (strcmp(strOpt,"OFF")==0) {
-      // Not yet implemented
+      podRadio.clear_registry();
     } else status = -2;
+
+  } else if (strcmp(cmd, "PODTIME?")==0) {
+    podRadio.test_all_clocks();
+    wait(1);
+    status = sendClockTestResultsToLaunchControl(s);
+  }
 
   // RADIO commands
   } else if (strcmp(cmd,"RADIO")==0) {
@@ -76,7 +87,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     }
 
   // PODLENGTHS command
-  } else if (strcmp(cmd,"PODLENGTHS")==0) {
+  } else if (strcmp(cmd,"PODLENGTHS")==0) {  // This is a hard-coded reference that should be linked to MAXPODS instead
     s.scanf(" %i %i %i %i %i %i\r\n", &numOpt, &numOpt2, &numOpt3, &numOpt4,
       &numOpt5, &numOpt6);
     sat.sbdMessage.podLengths[0] = numOpt;
@@ -163,6 +174,20 @@ int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
   s.printf("BAT=%.2f\r\n", getBatteryVoltage());
   s.printf("EXT_TEMP=%.1f\r\n", extTempSensor.read());
   s.printf("INT_TEMP=%.1f\r\n", intTempSensor.read());
+  return status;
+}
+
+// Status: Needs testing
+int sendClockTestResultsToLaunchControl(Serial &s) {
+  int status = 0;
+  char ni[21];
+  bool clock_status;
+  s.printf("PODTIME=\r\n");
+  for (int i = 0; i < podRadio.registry_length(); i++) {
+    clock_status = podRadio.get_clock_status(i, &ni);
+    s.printf("%s %d\r\n", ni, clock_status ? 1:0);
+  }
+  s.printf("END");
   return status;
 }
 

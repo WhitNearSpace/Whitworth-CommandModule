@@ -22,6 +22,8 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat);
 
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat);
 
+int sendClockTestResultsToLaunchControl(Serial &s);
+
 float getBatteryVoltage();
 
 void updateStatusLED();
