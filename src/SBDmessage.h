@@ -72,6 +72,10 @@ public:
   */
   void testPodBytes();
 
+  /** Test extraction of pod bytes
+  */
+  char getPodBytes(char podID, char* data);
+
   /** Calculate the checksum
   */
   unsigned short generateChecksum();

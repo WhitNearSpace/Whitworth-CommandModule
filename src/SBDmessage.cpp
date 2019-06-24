@@ -174,6 +174,14 @@ void SBDmessage::generatePodBytes() {
   }
 }
 
+char SBDmessage::getPodBytes(char podID, char* data) {
+  char numBytes = podLengths[podID-1];
+  for (int i = 0; i < numBytes; i++) {
+    data[i] = podData[podID-1][i];
+  }
+  return numBytes;
+}
+
 void SBDmessage::testPodBytes() {
   int b = 27;
   char dl;

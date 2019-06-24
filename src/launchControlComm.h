@@ -24,6 +24,8 @@ int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat);
 
 int sendClockTestResultsToLaunchControl(Serial &s);
 
+int sendPodDataToLaunchControl(char n, Serial &s, NAL9602 & sat);
+
 float getBatteryVoltage();
 
 void updateStatusLED();

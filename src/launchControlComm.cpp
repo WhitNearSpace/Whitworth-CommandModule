@@ -75,7 +75,14 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // PODDATA command
   } else if (strcmp(cmd,"PODDATA")==0) {
-    // Not yet implemented
+    s.scanf(" %i", &numOpt);
+    if (numOpt <= podRadio.registry_length()) {
+      podRadio.request_data_by_index(numOpt-1);
+      wait(1);
+      status = sendPodDataToLaunchControl(numOpt, s, sat);
+    } else {
+      status = -2;
+    }
 
   // MISSIONID command
   } else if (strcmp(cmd,"MISSIONID")==0) {
@@ -128,8 +135,6 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   // HELLO command
   } else if (strcmp(cmd, "HELLO")==0) {
     s.printf("COMMAND MODULE READY\r\n");
-
-
   } else status = -1;
 
   // Clear the buffer until reach \n
@@ -175,6 +180,21 @@ int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
   s.printf("EXT_TEMP=%.1f\r\n", extTempSensor.read());
   s.printf("INT_TEMP=%.1f\r\n", intTempSensor.read());
   return status;
+}
+
+// Status:  Needs testing
+int sendPodDataToLaunchControl(char n, Serial &s, NAL9602 & sat) {
+  int status = 0;
+  char data[MAX_POD_DATA_BYTES];
+  char len;
+  len = sat.sbdMessage.getPodBytes(n, data);
+  s.printf("PODDATA %d\r\n", n);
+  s.printf("BYTES = %d\r\n", len);
+  s.printf("DATA = ");
+  for (int i = 0; i < len; i++) {
+    s.printf("%2X ", data[i]);
+  }
+  s.printf("\r\n");
 }
 
 // Status: Needs testing
