@@ -272,6 +272,7 @@ int changeModeToPending(NAL9602 &sat) {
   sat.verboseLogging = false;
   int status = 0;
   sat.setModeGPS(pedestrian);
+  podRadio.broadcast_launch_primed(flight.transPeriod);
   wait(1);
   if (!sat.gpsStatus) {
     sat.gpsOn();  // Flight mode requires GPS
@@ -305,6 +306,7 @@ int changeModeToFlight(RN41 &bt, NAL9602 &sat) {
   int status = 0;
   sat.setModeGPS(airborne_low_dynamic);
   flight.mode = 2;
+  podRadio.broadcast_launch_detected();
   bt.initiateShutdown();
   sat.sbdMessage.sbdTransTimeout = 0.9*flight.transPeriod;
   sat.sbdMessage.sbdPodTimeout = 0.2*flight.transPeriod;
@@ -315,6 +317,7 @@ int changeModeToLanded(RN41 &bt, NAL9602 &sat) {
   int status = 0;
   sat.setModeGPS(pedestrian);
   flight.mode = 3;
+  podRadio.broadcast_landed();
   sat.sbdMessage.sbdTransTimeout = 0.9*POST_TRANS_PERIOD;
   sat.sbdMessage.sbdPodTimeout = 0.2*POST_TRANS_PERIOD;
   return status;
