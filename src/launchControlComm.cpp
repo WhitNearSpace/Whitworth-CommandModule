@@ -186,14 +186,16 @@ int sendPodDataToLaunchControl(char n, Serial &s, NAL9602 & sat) {
   int status = 0;
   char data[MAX_POD_DATA_BYTES];
   char len;
-  len = sat.sbdMessage.getPodBytes(n, data);
-  s.printf("PODDATA %d\r\n", n);
-  s.printf("BYTES = %d\r\n", len);
-  s.printf("DATA = ");
-  for (int i = 0; i < len; i++) {
-    s.printf("%2X ", data[i]);
+  len = podRadio.get_pod_data(n, data);
+  if (len>0) {
+    s.printf("PODDATA %d\r\n", n);
+    s.printf("BYTES = %d\r\n", len);
+    s.printf("DATA = ");
+    for (int i = 0; i < len; i++) {
+      s.printf("%2X ", data[i]);
+    }
+    s.printf("\r\n");
   }
-  s.printf("\r\n");
   return status;
 }
 
@@ -291,6 +293,7 @@ int changeModeToPending(NAL9602 &sat) {
   flight.groundAltitude = sat.altitude();
   flight.mode = 1;
   sat.sbdMessage.sbdTransTimeout = 0.9*PRE_TRANS_PERIOD;
+  sat.sbdMessage.sbdPodTimeout = 0.2*PRE_TRANS_PERIOD;
   timeSinceTrans.reset();
   timeSinceTrans.start();
   checkTime.reset();
@@ -304,6 +307,7 @@ int changeModeToFlight(RN41 &bt, NAL9602 &sat) {
   flight.mode = 2;
   bt.initiateShutdown();
   sat.sbdMessage.sbdTransTimeout = 0.9*flight.transPeriod;
+  sat.sbdMessage.sbdPodTimeout = 0.2*flight.transPeriod;
   return status;
 }
 
@@ -312,6 +316,7 @@ int changeModeToLanded(RN41 &bt, NAL9602 &sat) {
   sat.setModeGPS(pedestrian);
   flight.mode = 3;
   sat.sbdMessage.sbdTransTimeout = 0.9*POST_TRANS_PERIOD;
+  sat.sbdMessage.sbdPodTimeout = 0.2*POST_TRANS_PERIOD;
   return status;
 }
 

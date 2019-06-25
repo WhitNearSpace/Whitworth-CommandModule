@@ -178,7 +178,7 @@ int main() {
           if (!sat.sbdMessage.attemptingSend) {
             timeSinceTrans.reset();
           }
-          sbdFlags = send_SBD_message(bt, sat);
+          sbdFlags = send_SBD_message(bt, sat, podRadio);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
@@ -217,7 +217,7 @@ int main() {
           if (!sat.sbdMessage.attemptingSend) {
             timeSinceTrans.reset();
           }
-          sbdFlags = send_SBD_message(bt, sat);
+          sbdFlags = send_SBD_message(bt, sat, podRadio);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
@@ -246,7 +246,7 @@ int main() {
           if (!sat.sbdMessage.attemptingSend) {
             timeSinceTrans.reset();
           }
-          sbdFlags = send_SBD_message(bt, sat);
+          sbdFlags = send_SBD_message(bt, sat, podRadio);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;

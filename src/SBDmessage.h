@@ -101,6 +101,7 @@ public:
   Timer timeSincePodRequest;
   Timer timeSinceSbdRequest;
   float sbdTransTimeout;
+  float sbdPodTimeout;
 
 
 

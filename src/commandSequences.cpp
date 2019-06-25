@@ -11,7 +11,7 @@
  */
 
 // Status:  Ready for testing
-char send_SBD_message(RN41 &bt, NAL9602 &sat) {
+char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
   char successFlags = 0;
   bool gps_fix = false;
   bool msg_err = false;
@@ -30,38 +30,12 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   }
 
   // 1.  Check to see if pod data needs to be requested
-  while (!(sat.sbdMessage.doneLoading || sat.sbdMessage.requestedPodData)) {
-    // Is this pod expected to send data?  If not, move to next pod
-    if (sat.sbdMessage.podLengths[sat.sbdMessage.selectedPod]) {
-      // If a request has not been sent, send it now
-      if (!sat.sbdMessage.requestedPodData) {
-        // >>> NOT YET IMPLEMENTED <<<
-        sat.sbdMessage.requestedPodData = true;
-        sat.sbdMessage.timeSincePodRequest.start();
-        sat.sbdMessage.timeSincePodRequest.reset();
-        #ifdef DEV_MODE_LOGGING
-          time(&t);
-          fp = fopen("/local/devLog.txt", "a");
-          fprintf(fp, "%s \t Requested data from pod %i\r\n", ctime(&t), sat.sbdMessage.selectedPod);
-          fclose(fp);
-        #endif
-      }
-    } else {
-      sat.sbdMessage.selectedPod++;
-      sat.sbdMessage.requestedPodData = false;
-      if (sat.sbdMessage.selectedPod == MAXPODS) {
-        sat.sbdMessage.selectedPod = 0;
-        sat.sbdMessage.doneLoading = true;
-        #ifdef DEV_MODE_LOGGING
-          time(&t);
-          fp = fopen("/local/devLog.txt", "a");
-          fprintf(fp, "%s \t Done loading pod data\r\n", ctime(&t));
-          fclose(fp);
-        #endif
-      }
-    }
+  if (!sat.sbdMessage.requestedPodData) {
+    podRadio.request_data_all();
+    sat.sbdMessage.requestedPodData = true;
+    sat.sbdMessage.timeSincePodRequest.start();
+    sat.sbdMessage.timeSincePodRequest.reset();
   }
-
 
   // 2.  Have the GPS coordinates been updated for this SBD?  If not, update.
   if (!sat.sbdMessage.updatedGPS) {
@@ -94,11 +68,12 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
   }
   if (sat.sbdMessage.updatedGPS) successFlags = successFlags | 1;
 
-  // 3.  Has a pod been requested to send data?
-  //     If so, check for availability and load into intermediate buffer
-  if (sat.sbdMessage.requestedPodData) {
-    //  >>> NOT YET IMPLEMENTED <<<
-    //  Should have time out feature (using timeSincePodRequest)
+  // 3.  Check for pod data availability and load into intermediate buffer
+  if ((sat.sbdMessage.requestedPodData) && (!sat.sbdMessage.doneLoading)) {
+    if ((podRadio.is_all_data_updated()) || (sat.sbdMessage.timeSincePodRequest>sat.sbdMessage.sbdPodTimeout)) {
+      transfer_pod_data_to_SBD(podRadio, sat);
+      sat.sbdMessage.doneLoading = true;
+    }
   }
   if (sat.sbdMessage.doneLoading) successFlags = successFlags | 2;
 
@@ -173,4 +148,17 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat) {
     fclose(fp);
   }
   return successFlags;
+}
+
+void transfer_pod_data_to_SBD(CM_to_FC &podRadio, NAL9602 &sat) {
+  char data[MAX_POD_DATA_BYTES];
+  char len;
+  char n;
+  for (int i = 0; i < podRadio.registry_length(); i++) {
+    n = podRadio.pod_index(i);
+    len = podRadio.get_pod_data(n, data);
+    sat.sbdMessage.podLengths[n-1] = len;
+    sat.sbdMessage.loadPodBuffer(n,data);
+  }
+  sat.sbdMessage.updateMsgLength();
 }
