@@ -32,19 +32,30 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     if (strcmp(strOpt,"ON")==0) {
       char ni[21];
       char len;
-      for (int i = 0; i < MAXPODS; i++) {
-        s.scanf("POD %20s = %i", &ni, &len);
-        podRadio.add_registry_entry(ni, len);
+      char n;
+      int matches;
+      s.scanf("%79s", &strOpt);
+      while (strcmp(strOpt,"POD") == 0) {
+        matches = s.scanf("%i = %20s %i", &n, &ni, &len);
+        if ((matches == 3) && (n <= MAXPODS)) {
+          podRadio.add_registry_entry(n, ni, len);
+          sat.sbdMessage.podLengths[n-1] = len;
+        }
+        s.scanf("%79s", &strOpt);
       }
+      sat.sbdMessage.updateMsgLength();
     } else if (strcmp(strOpt,"OFF")==0) {
       podRadio.clear_registry();
+      for (int i = 0; i < MAXPODS; i++) {
+        sat.sbdMessage.podLengths[i] = 0;
+      }
+      sat.sbdMessage.updateMsgLength();
     } else status = -2;
 
   } else if (strcmp(cmd, "PODTIME?")==0) {
     podRadio.test_all_clocks();
     wait(1);
     status = sendClockTestResultsToLaunchControl(s);
-  }
 
   // RADIO commands
   } else if (strcmp(cmd,"RADIO")==0) {
@@ -92,18 +103,6 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     } else {
       status = -2;
     }
-
-  // PODLENGTHS command
-  } else if (strcmp(cmd,"PODLENGTHS")==0) {  // This is a hard-coded reference that should be linked to MAXPODS instead
-    s.scanf(" %i %i %i %i %i %i\r\n", &numOpt, &numOpt2, &numOpt3, &numOpt4,
-      &numOpt5, &numOpt6);
-    sat.sbdMessage.podLengths[0] = numOpt;
-    sat.sbdMessage.podLengths[1] = numOpt2;
-    sat.sbdMessage.podLengths[2] = numOpt3;
-    sat.sbdMessage.podLengths[3] = numOpt4;
-    sat.sbdMessage.podLengths[4] = numOpt5;
-    sat.sbdMessage.podLengths[5] = numOpt6;
-    sat.sbdMessage.updateMsgLength();
 
   // FLIGHT_MODE commands
   } else if (strcmp(cmd,"FLIGHT_MODE?")==0) {
@@ -195,6 +194,7 @@ int sendPodDataToLaunchControl(char n, Serial &s, NAL9602 & sat) {
     s.printf("%2X ", data[i]);
   }
   s.printf("\r\n");
+  return status;
 }
 
 // Status: Needs testing
@@ -204,7 +204,7 @@ int sendClockTestResultsToLaunchControl(Serial &s) {
   bool clock_status;
   s.printf("PODTIME=\r\n");
   for (int i = 0; i < podRadio.registry_length(); i++) {
-    clock_status = podRadio.get_clock_status(i, &ni);
+    clock_status = podRadio.get_clock_status(i, ni);
     s.printf("%s %d\r\n", ni, clock_status ? 1:0);
   }
   s.printf("END");
