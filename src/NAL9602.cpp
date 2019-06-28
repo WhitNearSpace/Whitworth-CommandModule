@@ -125,7 +125,7 @@ bool NAL9602::gpsUpdate() {
   modem.scanf(" AT+PLOC");
   modem.scanf(" +PLOC:");
   receivedTime = time(NULL);
-  argFilled = modem.scanf(" Latitude=%d:%d.%d %s",&deg,&min,&decmin,&dir);
+  argFilled = modem.scanf(" Latitude=%d:%d.%d %s",&deg,&min,&decmin,dir);
   if (argFilled == 4) {
    coord.setLatitudeDegMin(deg, min, decmin, strcmp(dir,"North")==0);
    if (verboseLogging)
@@ -133,7 +133,7 @@ bool NAL9602::gpsUpdate() {
   } else valid = false;
 
   if (valid) {
-    argFilled = modem.scanf(" Longitude=%d:%d.%d %s",&deg,&min,&decmin,&dir);
+    argFilled = modem.scanf(" Longitude=%d:%d.%d %s",&deg,&min,&decmin,dir);
     if (argFilled == 4) {
      coord.setLongitudeDegMin(deg, min, decmin, strcmp(dir,"East")==0);
      if (verboseLogging)
@@ -151,11 +151,11 @@ bool NAL9602::gpsUpdate() {
   }
 
   if (valid) {
-      modem.scanf("%79s", &fixString);
+      modem.scanf("%79s", fixString);
       if (strcmp(invalidString,fixString)==0)
         valid = false;
       while (strcmp(fixString,"Satellites")!=0) {
-        modem.scanf("%79s", &fixString);
+        modem.scanf("%79s", fixString);
       }
 
     argFilled = modem.scanf(" Used=%d", &num);
@@ -344,7 +344,7 @@ NetworkRegistration NAL9602::joinNetwork() {
   NetworkRegistration reg;
   modem.printf("AT+PSREG\r");
   modem.scanf(" AT+PSREG");
-  modem.scanf("%79s", &s);
+  modem.scanf("%79s", s);
   if (strcmp(s,"No")==0) { // No GPS fix
     reg.status = -1;
     reg.err = -1;
@@ -437,9 +437,9 @@ int NAL9602::setMessage(float voltage, float intTemp, float extTemp) {
     return -1;
   } else {
     modem.printf("AT+SBDWB=%d\r", n);
-    modem.scanf("%79s", &status);
+    modem.scanf("%79s", status);
     while ((strcmp(status,"READY")!=0)) {
-      modem.scanf("%79s", &status);
+      modem.scanf("%79s", status);
     }
     for (int i = 0; i < n; i++) {
       modem.printf("%c", sbdMessage.getByte(i));
@@ -515,11 +515,11 @@ void NAL9602::echoStartLog(Serial &s) {
 // Status: Lab tested with 9602-A
 void NAL9602::scanToEnd(bool verbose) {
   char status[80];
-  modem.scanf("%79s", &status);
+  modem.scanf("%79s", status);
   while (((strcmp(status,"ERROR")!=0))&&(strcmp(status,"OK")!=0)) {
     if (verbose)
       pc.printf("\t%s\r\n", status);
-    modem.scanf("%79s", &status);
+    modem.scanf("%79s", status);
   }
   if (verbose)
     pc.printf("\tStatus = %s\r\n", status);

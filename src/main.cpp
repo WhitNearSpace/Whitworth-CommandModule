@@ -48,7 +48,7 @@ struct FlightParameters flight;
 // Timing objects
 Timer timeSinceTrans;  // time since last SBD transmission
 Timer checkTime;       // timer in pending mode to do checks increasing altitude
-Timer statusLightTimer;
+Ticker statusLightTicker;
 
 
 int main() {
@@ -142,7 +142,7 @@ int main() {
   if (bt.modem.readable()) {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
   }
-  statusLightTimer.start();
+  statusLightTicker.attach(&updateStatusLED,1.0);
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
 
   podInviteTime.start();
@@ -163,6 +163,7 @@ int main() {
         if (podInviteTime > podInviteInterval) {
           podInviteTime.reset();
           podRadio.invite();
+          podRadio.printDirectory();
         }
         break;
 
@@ -260,8 +261,7 @@ int main() {
             // Battery is running low so shut down systems
             sat.satLinkOff();
             sat.gpsOff();
-            statusLightTimer.stop();
-            statusLightTimer.reset();
+            statusLightTicker.detach();
             powerStatus = 0;
             gpsStatus = 0;
             satStatus = 0;
@@ -274,10 +274,6 @@ int main() {
           }
         }
         break;
-    }
-    if (statusLightTimer>1) {
-      updateStatusLED();
-      statusLightTimer.reset();
     }
   }
  }

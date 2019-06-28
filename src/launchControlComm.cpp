@@ -43,6 +43,9 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
         }
         s.scanf("%79s", strOpt);
       }
+      podRadio.sync_registry();
+      podRadio.printDirectory();
+      podRadio.printRegistry();
       sat.sbdMessage.updateMsgLength();
     } else if (strcmp(strOpt,"OFF")==0) {
       podRadio.clear_registry();
@@ -271,27 +274,35 @@ int changeModeToLab(NAL9602 &sat) {
 int changeModeToPending(NAL9602 &sat) {
   sat.verboseLogging = false;
   int status = 0;
+  printf("Setting GPS mode to pedestrian\r\n");
   sat.setModeGPS(pedestrian);
+  printf("Broadcasting primed to launch\r\n");
   podRadio.broadcast_launch_primed(flight.transPeriod);
   wait(1);
+  printf("Turning on GPS\r\n");
   if (!sat.gpsStatus) {
     sat.gpsOn();  // Flight mode requires GPS
     wait(1);
   }
+  printf("Turning on Iridium\r\n");
   if (!sat.iridiumStatus) {
     sat.satLinkOn();  // Flight mode requires sat
     wait(1);
   }
   bool fix;
   int fixSats = 0;
+  printf("Looking for GPS fix...");
   while (fixSats<4) {
     fix = sat.gpsUpdate();
     if (fix) fixSats = sat.getSatsUsed();
     if (fixSats<4) {
+      printf(".");
       wait(5);
     }
   }
+  printf("found\r\n");
   flight.groundAltitude = sat.altitude();
+  printf("Changing flight mode to 1\r\n");
   flight.mode = 1;
   sat.sbdMessage.sbdTransTimeout = 0.9*PRE_TRANS_PERIOD;
   sat.sbdMessage.sbdPodTimeout = 0.2*PRE_TRANS_PERIOD;
@@ -299,6 +310,7 @@ int changeModeToPending(NAL9602 &sat) {
   timeSinceTrans.start();
   checkTime.reset();
   checkTime.start();
+  printf("Success!\r\n");
   return status;
 }
 
