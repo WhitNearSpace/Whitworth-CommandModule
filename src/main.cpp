@@ -22,8 +22,8 @@
  *  1.0 - Successful first flight
  */
 
-char versionString[] = "2.0.0-p1";
-char dateString[] = "6/21/2019";
+char versionString[] = "2.0.0-p2";
+char dateString[] = "6/27/2019";
 
 // LPC1768 connections
 Serial pc(USBTX,USBRX);       // Serial connection via USB
@@ -48,6 +48,7 @@ struct FlightParameters flight;
 // Timing objects
 Timer timeSinceTrans;  // time since last SBD transmission
 Timer checkTime;       // timer in pending mode to do checks increasing altitude
+Timer statusLightTimer;
 
 
 int main() {
@@ -56,7 +57,6 @@ int main() {
   bool transmit_success;  // Was SBD transmit a success?
   bool transmit_timeout;  // Did the SBD transmission fail to complete in time?
   char sbdFlags; // byte of flags (bit 0 = gps, 1 = lo )
-  Ticker statusTicker;  // Ticker controlling update of status LEDs
   Timer pauseTime;  // wait for things to respond but if not, move on
   Timer podInviteTime;   // time since last pod invitation sent
   int landedIndicator = 0; // number of times has been flagged as landed
@@ -142,7 +142,7 @@ int main() {
   if (bt.modem.readable()) {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
   }
-  statusTicker.attach(&updateStatusLED, 1.0);
+  statusLightTimer.start();
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
 
   podInviteTime.start();
@@ -260,7 +260,8 @@ int main() {
             // Battery is running low so shut down systems
             sat.satLinkOff();
             sat.gpsOff();
-            statusTicker.detach();
+            statusLightTimer.stop();
+            statusLightTimer.reset();
             powerStatus = 0;
             gpsStatus = 0;
             satStatus = 0;
@@ -273,6 +274,10 @@ int main() {
           }
         }
         break;
+    }
+    if (statusLightTimer>1) {
+      updateStatusLED();
+      statusLightTimer.reset();
     }
   }
  }
