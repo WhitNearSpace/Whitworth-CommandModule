@@ -7,10 +7,10 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   bool reachedEnd = false;
   int numOpt, numOpt2, numOpt3, numOpt4, numOpt5, numOpt6;
   int status = 0;
-  s.scanf("%79s", &cmd);
+  s.scanf("%79s", cmd);
   // GPS commands
   if (strcmp(cmd,"GPS")==0) {
-    s.scanf(" %79s", &strOpt);
+    s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
       sat.gpsOn();
     } else if (strcmp(strOpt,"OFF")==0) {
@@ -19,7 +19,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // SATLINK commands
   } else if (strcmp(cmd,"SATLINK")==0) {
-    s.scanf(" %79s", &strOpt);
+    s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
       sat.satLinkOn();
     } else if (strcmp(strOpt,"OFF")==0) {
@@ -28,20 +28,20 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // PODLINK commands
   } else if (strcmp(cmd,"PODLINK")==0) {
-    s.scanf(" %79s", &strOpt);
+    s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
       char ni[21];
-      char len;
-      char n;
+      int len;
+      int n;
       int matches;
-      s.scanf("%79s", &strOpt);
+      s.scanf("%79s", strOpt);
       while (strcmp(strOpt,"POD") == 0) {
-        matches = s.scanf("%i = %20s %i", &n, &ni, &len);
+        matches = s.scanf("%d = %20s %d", &n, ni, &len);
         if ((matches == 3) && (n <= MAXPODS)) {
           podRadio.add_registry_entry(n, ni, len);
           sat.sbdMessage.podLengths[n-1] = len;
         }
-        s.scanf("%79s", &strOpt);
+        s.scanf("%79s", strOpt);
       }
       sat.sbdMessage.updateMsgLength();
     } else if (strcmp(strOpt,"OFF")==0) {
@@ -59,7 +59,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   // RADIO commands
   } else if (strcmp(cmd,"RADIO")==0) {
-    s.scanf(" %79s", &strOpt);
+    s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
       // Not yet implemented
     } else if (strcmp(strOpt,"OFF")==0) {
@@ -109,7 +109,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     s.printf("MODE=%i\r\n", flight.mode);
 
   } else if (strcmp(cmd,"FLIGHT_MODE")==0) {
-    s.scanf(" %79s", &strOpt);
+    s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
       if (flight.mode<2) {
         status = changeModeToPending(sat);
