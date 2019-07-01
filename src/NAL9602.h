@@ -55,7 +55,8 @@ struct BufferStatus
 class NAL9602 {
 
 public:
-  Serial modem;
+  UARTSerial modem;
+  ATCmdParser at;
   InterruptIn RI;
   SBDmessage sbdMessage;
   bool ringAlert;
@@ -206,7 +207,7 @@ public:
   /** Reads 9602 response until ERROR or OK found
   * @param verbose - if true, print to "console"
   */
-  void scanToEnd(bool verbose = false);
+  // void scanToEnd(bool verbose = false);
 
   /** Connect to Iridium network
   */
@@ -244,10 +245,13 @@ public:
   int transmitMessageWithRingAlert();
 
 private:
+
   GPSCoordinates coord;
   int incomingMessageLength;
   char modemStartLog[LOG_BUFF_LENGTH];
   unsigned int startLogLength;
+
+  void _oob_invalid_fix();
 };
 
  #endif

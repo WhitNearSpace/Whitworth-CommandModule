@@ -155,8 +155,8 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 // Status: Lab tested with 9602-A
 int sendGPStoLaunchControl(Serial &s, NAL9602 &sat) {
   int status = 0;
-  bool fix;
   bool logSetting = sat.verboseLogging;
+  bool fix;
   sat.verboseLogging = false;
   fix = sat.gpsUpdate();
   if (fix) {

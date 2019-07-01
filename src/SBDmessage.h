@@ -14,7 +14,7 @@
 
 
 #define SBD_LENGTH 340
-#define POD_LENGTH 125
+#define POD_LENGTH 70
 #define MAXPODS 6
 
 class SBDmessage {

@@ -11,7 +11,7 @@
  */
 
 // Status: Incomplete
-NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin, rx_pin), RI(ri_pin) {
+NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin, rx_pin, 19200), at(&modem,"\r"), RI(ri_pin) {
   // Set initial state of flags
   ringAlert = false;
   messageAvailable = false;
@@ -21,8 +21,7 @@ NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin,
   iridiumStatus = false;
   startLogLength = 0;
 
-  // Set modem baud rate
-  modem.baud(19200);
+  at.oob("Invalid Position Fix", callback(this, &NAL9602::_oob_invalid_fix));
 }
 
 // Status: Incomplete
@@ -33,29 +32,26 @@ NAL9602::~NAL9602(void) {
 
 // Status: Tested with terminal
 void NAL9602::satLinkOn(void) {
-  modem.printf("AT*S1\r");
-  scanToEnd();
+  at.send("AT*S1");
+  if (!at.recv("OK")) printf("satLinkOn failure\r\n");
   iridiumStatus = true;
 }
 
 // Status: Tested with terminal
 void NAL9602::satLinkOff(void) {
-  modem.printf("AT*S0\r");
-  scanToEnd();
+  at.send("AT*S0") && at.recv("OK");
   iridiumStatus = false;
 }
 
 // Status: Lab tested with 9602-A
 void NAL9602::gpsOn(void) {
-  modem.printf("AT+PP=1\r");
-  scanToEnd();
+  at.send("AT+PP=1") && at.recv("OK");
   gpsStatus = true;
 }
 
 // Status: Lab tested with 9602-A
 void NAL9602::gpsOff(void) {
-  modem.printf("AT+PP=0\r");
-  scanToEnd();
+  at.send("AT+PP=0") && at.recv("OK");
   coord.clearCoordinates();
   gpsStatus = false;
 }
@@ -63,15 +59,15 @@ void NAL9602::gpsOff(void) {
 // Status: Lab tested with 9602-A
 int NAL9602::checkRingAlert(void) {
   int sri;
-  int argFilled;
+  bool argFilled;
 
-  modem.printf("AT+CRIS\r");
+  at.send("AT+CRIS");
   // Expected response has the form +CRIS:<tri>,<sri>
   // tri is not defined for 9602
-  modem.scanf(" AT+CRIS");
-  argFilled = modem.scanf(" +CRIS: %*d,%d", &sri);
-  scanToEnd();
-  if (argFilled == 1) {
+  at.recv("AT+CRIS");
+  argFilled = at.recv("+CRIS: %*d,%d\r\n", &sri);
+
+  if (argFilled) {
     if ( (sri==0) || (sri==1) ) {
       ringAlert = (sri==1);
       return sri;
@@ -84,14 +80,13 @@ int NAL9602::checkRingAlert(void) {
 // Status: Tested with terminal
 int NAL9602::signalQuality() {
   int bars;
-  int argFilled;
+  bool argFilled;
 
-  modem.printf("AT+CSQF\r");
+  at.send("AT+CSQF");
   // Expected response has form: +CSQF:<rssi>
-  modem.scanf(" AT+CSQF");
-  argFilled = modem.scanf(" +CSQF:%d", &bars);
-  scanToEnd();
-  if (argFilled == 1) {
+  at.recv("AT+CSQF");
+  argFilled = at.recv("+CSQF:%d\r\n", &bars);
+  if (argFilled) {
     if ((bars>=0) && (bars<=5))
       return bars;
     else
@@ -102,17 +97,19 @@ int NAL9602::signalQuality() {
 
 // Status: Lab tested with 9602-A
 bool NAL9602::gpsUpdate() {
-  int argFilled;
-  bool valid = true;
+  at.debug_on(1);
+  bool argFilled;
   int deg, min, decmin;
   char dir[10];
   float alt;
   char fixString[80];
-  char invalidString[] = "Invalid";
   int num;
   time_t receivedTime;
 
-  modem.printf("AT+PLOC\r");
+  coord.positionFix = true;
+  bool valid = true;
+
+  at.send("AT+PLOC");
   /* Expected response has the form:
    * +PLOC:
    * Latitude:<||>:<mm>.<nnnnn> <N/S>
@@ -122,55 +119,42 @@ bool NAL9602::gpsUpdate() {
    * Satellites Used=<zz>
   */
 
-  modem.scanf(" AT+PLOC");
-  modem.scanf(" +PLOC:");
+  at.recv("AT+PLOC");
+  at.recv("+PLOC:");
   receivedTime = time(NULL);
-  argFilled = modem.scanf(" Latitude=%d:%d.%d %s",&deg,&min,&decmin,dir);
-  if (argFilled == 4) {
+  argFilled = at.recv("Latitude=%d:%d.%d %s\r\n",&deg,&min,&decmin,dir);
+  if (argFilled) {
    coord.setLatitudeDegMin(deg, min, decmin, strcmp(dir,"North")==0);
-   if (verboseLogging)
-     printf("Latitude = %d:%d.%d %s\r\n", deg, min, decmin, dir);
   } else valid = false;
 
   if (valid) {
-    argFilled = modem.scanf(" Longitude=%d:%d.%d %s",&deg,&min,&decmin,dir);
-    if (argFilled == 4) {
+    argFilled = at.recv("Longitude=%d:%d.%d %s\r\n",&deg,&min,&decmin,dir);
+    if (argFilled) {
      coord.setLongitudeDegMin(deg, min, decmin, strcmp(dir,"East")==0);
-     if (verboseLogging)
-       printf("Longitude = %d:%d.%d %s\r\n", deg, min, decmin, dir);
     } else valid = false;
   }
 
   if (valid) {
-    argFilled = modem.scanf(" Altitude=%f meters",&alt);
-    if (argFilled == 1) {
+    argFilled = at.recv("Altitude=%f meters",&alt);
+    if (argFilled) {
       coord.setAltitude(alt);
-      if (verboseLogging)
-        printf("Altitude = %.2f\r\n", alt);
     } else valid = false;
   }
 
   if (valid) {
-      modem.scanf("%79s", fixString);
-      if (strcmp(invalidString,fixString)==0)
-        valid = false;
-      while (strcmp(fixString,"Satellites")!=0) {
-        modem.scanf("%79s", fixString);
-      }
-
-    argFilled = modem.scanf(" Used=%d", &num);
-    coord.satUsed = num;
+    argFilled = at.recv("Satellites Used=%d\r\n", &num);
+    at.recv("OK");
+    if (argFilled) {
+      coord.satUsed = num;
+    } else valid = false;
   }
 
-  if (valid) {
-    if (verboseLogging)
-      printf("Satellites = %d\r\n", num);
-    coord.syncTime = receivedTime;
-    coord.positionFix = valid;
-  }
-  scanToEnd();
+  coord.positionFix = valid && coord.positionFix && (coord.satUsed > 3);
+  if (coord.positionFix) {
+    coord.syncTime = receivedTime;  
+  } 
 
-  modem.printf("AT+PVEL\r");
+  at.send("AT+PVEL");
   /* Expected response has the form:
   * +PVEL:
   * Ground Velocity=<#g> km/h, <#h> degrees from true North
@@ -180,24 +164,25 @@ bool NAL9602::gpsUpdate() {
   */
   float v;
   float h;
-  modem.scanf(" AT+PVEL");
-  modem.scanf(" +PVEL:");
-  argFilled = modem.scanf(" Ground Velocity=%f km/h, %f degrees from true North", &v, &h);
-  if (argFilled == 2) {
+  at.recv("AT+PVEL");
+  at.recv("+PVEL:");
+  argFilled = at.recv("Ground Velocity=%f km/h, %f degrees from true North", &v, &h);
+  if (argFilled) {
     coord.setGroundSpeed(v);
     coord.setHeading((int)h);
     if (verboseLogging)
       printf("Ground velocity = %f km/h, %.2f deg from north\r\n", v, h);
   };
 
-  argFilled = modem.scanf(" Vertical Velocity=%f m/s", &v);
-  if (argFilled == 1) {
+  argFilled = at.recv("Vertical Velocity=%f m/s", &v);
+  if (argFilled) {
     coord.setVerticalVelocity(v);
     if (verboseLogging)
       printf("Vertical velocity = %.2f m/s\r\n", v);
   }
-  scanToEnd();
-  return valid;
+  at.recv("OK");
+  at.debug_on(0);
+  return coord.positionFix;
 }
 
 // Status: Lab tested with 9602-A
@@ -228,14 +213,14 @@ int NAL9602::getSatsUsed() {
 
 // Status: Lab tested with 9602-A
 void NAL9602::setModeGPS(gpsModes mode) {
-  modem.printf("AT+PNAV=%d\r",mode);
-  scanToEnd();
+  at.send("AT+PNAV=%d",mode);
+  at.recv("OK");
 }
 
 // Status: Lab tested with 9602-A
 void NAL9602::zeroMessageCounter() {
-  modem.printf("AT+SBDC\r");
-  scanToEnd();
+  at.send("AT+SBDC");
+  at.recv("OK");
 }
 
 // Status: Ready for testing
@@ -250,10 +235,10 @@ int NAL9602::transmitMessageWithRingAlert() {
   //   modem.printf("AT+PSIXA\r");
   //   modem.scanf(" AT+PSIXA");
   // } else {
-    modem.printf("AT+PSIX\r");
-    modem.scanf(" AT+PSIX");
+  at.send("AT+PSIX");
+  at.recv("AT+PSIX");
   // }
-  modem.scanf(" +SBDIX:%d,%d,%d,%d,%d,%d", &outgoingStatus,
+  at.recv("+SBDIX:%d,%d,%d,%d,%d,%d\r\n", &outgoingStatus,
     &outgoingMessageCount, &incomingStatus, &incomingMessageCount,
     &incomingLength, &queueLength);
   if (incomingStatus == 1) {
@@ -262,7 +247,7 @@ int NAL9602::transmitMessageWithRingAlert() {
   }
   if (queueLength == 0)
     ringAlert = false;
-  scanToEnd();
+  at.recv("OK");
   switch(outgoingStatus) {
     case 0:
       pc.printf("MO message transferred successfully\r\n");
@@ -281,9 +266,9 @@ int NAL9602::transmitMessage() {
   int incomingMessageCount;
   int incomingLength;
   int queueLength;
-  modem.printf("AT+SBDI\r");
-  modem.scanf(" AT+SBDI");
-  modem.scanf(" +SBDI:%d,%d,%d,%d,%d,%d", &outgoingStatus,
+  at.send("AT+SBDI");
+  at.recv("AT+SBDI");
+  at.recv("+SBDI:%d,%d,%d,%d,%d,%d\r\n", &outgoingStatus,
     &outgoingMessageCount, &incomingStatus, &incomingMessageCount,
     &incomingLength, &queueLength);
   if (incomingStatus == 1) {
@@ -292,7 +277,7 @@ int NAL9602::transmitMessage() {
   }
   if (queueLength == 0)
     ringAlert = false;
-  scanToEnd();
+  at.recv("OK");
   /* Outgoing (MO) codes
    *   0 = no SBD message to send from the 9602
    *   1 = SBD message successfully sent
@@ -306,29 +291,25 @@ int NAL9602::transmitMessage() {
 bool NAL9602::syncTime() {
   struct tm t;
   validTime = false;
-  unsigned int month, day, year;
+  int month, day, year;
 
 
   // Get UTC date from GPS
-  modem.printf("AT+PD\r");
-  modem.scanf(" AT+PD");
-  modem.scanf(" +PD:");
-  modem.scanf(" UTC Date=%u-%u-%u", &month, &day, &year);
+  at.send("AT+PD");
+  at.recv("AT+PD");
+  at.recv("+PD:");
+  at.recv("UTC Date=%d-%d-%d\r\n", &month, &day, &year);
   t.tm_mon = month - 1;  // January = 0, not 1
   t.tm_mday = day;
   t.tm_year = year - 1900; // Years since 1900 is required
-  scanToEnd();
-  if (verboseLogging)
-    pc.printf("UTC: %d-%d-%d\t", t.tm_mon+1, t.tm_mday, t.tm_year+1900);
+  at.recv("OK");
 
   // Get UTC time from GPS
-  modem.printf("AT+PT\r");
-  modem.scanf(" AT+PT");
-  modem.scanf(" +PT:");
-  modem.scanf(" UTC Time=%d:%d:%d", &t.tm_hour, &t.tm_min, &t.tm_sec);
-  scanToEnd();
-  if (verboseLogging)
-    pc.printf("%.2d:%.2d:%.2d\r\n\r\n", t.tm_hour, t.tm_min, t.tm_sec);
+  at.send("AT+PT");
+  at.recv("AT+PT");
+  at.recv("+PT:");
+  at.recv("UTC Time=%d:%d:%d.", &t.tm_hour, &t.tm_min, &t.tm_sec);
+  at.recv("OK");
 
   // Set RTC and associated flag
   set_time(mktime(&t));
@@ -338,73 +319,74 @@ bool NAL9602::syncTime() {
   return validTime;
 }
 
-// Status: Lab tested with 9602-A
+// Status: Needs testing
 NetworkRegistration NAL9602::joinNetwork() {
   char s[80];
   NetworkRegistration reg;
-  modem.printf("AT+PSREG\r");
-  modem.scanf(" AT+PSREG");
-  modem.scanf("%79s", s);
+  at.send("AT+PSREG");
+  at.recv("AT+PSREG");
+  at.recv("%79s\r\n", s);
   if (strcmp(s,"No")==0) { // No GPS fix
     reg.status = -1;
     reg.err = -1;
   } else {
-    modem.scanf(" +SBDREG:%i,%i", &reg.status, &reg.err);
+    at.recv(" +SBDREG:%i,%i\r\n", &reg.status, &reg.err);
   }
-  scanToEnd();
+  at.recv("OK");
   return reg;
 }
 
 // Status: Ready for testing
 void NAL9602::clearBuffer(int selectedBuffer) {
-  modem.printf("AT+SBDD%d\r", selectedBuffer);
-  scanToEnd();
+  at.send("AT+SBDD%d", selectedBuffer);
+  at.recv("OK");
 }
 
 // Status:  Lab tested with 9602-A
 BufferStatus NAL9602::getBufferStatus() {
   BufferStatus bs;
-  modem.printf("AT+SBDSX\r");
-  modem.scanf(" AT+SBDSX");
-  modem.scanf(" +SBDSX: %d,%d,%d,%d,%d,%d", &bs.outgoingFlag, &bs.outgoingMsgNum,
+  at.send("AT+SBDSX");
+  at.recv("AT+SBDSX");
+  at.recv("+SBDSX: %d,%d,%d,%d,%d,%d\r\n", &bs.outgoingFlag, &bs.outgoingMsgNum,
     &bs.incomingFlag, &bs.incomingMsgNum, &bs.raFlag, &bs.numMsgWaiting);
-  scanToEnd();
+  at.recv("OK");
   return bs;
 }
 
 // Status: Ready for testing
 void NAL9602::getGpsModes() {
-  modem.printf("AT+PNAV=?\r");
+  at.send("AT+PNAV=?");
   echoModem(pc, 15);
 }
 
 // Status: Ready for testing
 void NAL9602::dumpManufacturer() {
-  modem.printf("AT+GMI\r");
+  at.send("AT+GMI");
   echoModem(pc, 15);
 }
 
 // Status: Ready for testing
 void NAL9602::dumpModel() {
-  modem.printf("AT+GMM\r");
+  at.send("AT+GMM");
   echoModem(pc, 15);
 }
 
 // Status: Ready for testing
 void NAL9602::dumpRevision() {
-  modem.printf("AT+GMR\r");
+  at.send("AT+GMR");
   echoModem(pc, 15);
 }
 
 // Status: Ready for testing
 void NAL9602::dumpIMEI() {
-  modem.printf("AT+GSN\r");
+  at.send("AT+GSN");
   echoModem(pc, 15);
 }
 
 void NAL9602::gpsNoSleep() {
-  modem.printf("AT^GAO1\r");
-  scanToEnd();
+  at.send("AT^GAO1");
+  at.recv("AT^GAO1");
+  at.recv("OK");
 }
 
 // Status: Lab tested with 9602-A
@@ -436,18 +418,25 @@ int NAL9602::setMessage(float voltage, float intTemp, float extTemp) {
   if (n > 340) {
     return -1;
   } else {
-    modem.printf("AT+SBDWB=%d\r", n);
-    modem.scanf("%79s", status);
-    while ((strcmp(status,"READY")!=0)) {
-      modem.scanf("%79s", status);
-    }
+    at.send("AT+SBDWB=%d", n);
+    at.recv("READY");
+    // modem.printf("AT+SBDWB=%d\r", n);
+    // modem.scanf("%79s", status);
+    // while ((strcmp(status,"READY")!=0)) {
+    //   modem.scanf("%79s", status);
+    // }
     for (int i = 0; i < n; i++) {
-      modem.printf("%c", sbdMessage.getByte(i));
+      at.putc(sbdMessage.getByte(i));
+      // modem.printf("%c", sbdMessage.getByte(i));
     }
     unsigned short checksum = sbdMessage.generateChecksum();
-    modem.printf("%c%c", (char)(checksum/256), (char)(checksum%256));
-    modem.scanf(" %d",&err);
-    scanToEnd();
+    at.putc((char)(checksum/256));
+    at.putc((char)(checksum%256));
+    // modem.printf("%c%c", (char)(checksum/256), (char)(checksum%256));
+    at.recv("%d\r\n", &err);
+    at.recv("OK");
+    // modem.scanf(" %d",&err);
+    // scanToEnd();
     switch(err) {
       case 0:
         pc.printf("SBD message successfully written to 9602\r\n");
@@ -477,7 +466,8 @@ void NAL9602::echoModem(Serial &s, int listenTime) {
   t.start();
   while (t<listenTime) {  // Be patient and listen for listenTime (in seconds)
     while ((modem.readable()) && (i<BUFFLENGTH)) {
-      buff[i] = modem.getc();
+      buff[i] = at.getc();
+      // buff[i] = modem.getc();
       i++;
     }
     while ((j<i) && (!modem.readable())) {
@@ -498,7 +488,7 @@ void NAL9602::saveStartLog(int listenTime) {
   t.start();
   while (t<listenTime) {
     while ((modem.readable()) && (startLogLength < LOG_BUFF_LENGTH)) {
-      modemStartLog[startLogLength] = modem.getc();
+      modemStartLog[startLogLength] = at.getc();
       startLogLength++;
     }
   }
@@ -512,15 +502,6 @@ void NAL9602::echoStartLog(Serial &s) {
     s.printf("\r\nStart output exceeded %d character buffer\r\n", LOG_BUFF_LENGTH);
 }
 
-// Status: Lab tested with 9602-A
-void NAL9602::scanToEnd(bool verbose) {
-  char status[80];
-  modem.scanf("%79s", status);
-  while (((strcmp(status,"ERROR")!=0))&&(strcmp(status,"OK")!=0)) {
-    if (verbose)
-      pc.printf("\t%s\r\n", status);
-    modem.scanf("%79s", status);
-  }
-  if (verbose)
-    pc.printf("\tStatus = %s\r\n", status);
+void NAL9602::_oob_invalid_fix() {
+  coord.positionFix = false;
 }

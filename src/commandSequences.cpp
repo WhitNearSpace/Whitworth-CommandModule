@@ -156,7 +156,7 @@ void transfer_pod_data_to_SBD(CM_to_FC &podRadio, NAL9602 &sat) {
   char n;
   for (int i = 0; i < podRadio.registry_length(); i++) {
     n = podRadio.pod_index(i);
-    len = podRadio.get_pod_data(n, data);
+    len = podRadio.get_pod_data(i+1, data);
     sat.sbdMessage.podLengths[n-1] = len;
     sat.sbdMessage.loadPodBuffer(n,data);
   }

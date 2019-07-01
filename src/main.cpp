@@ -74,11 +74,11 @@ int main() {
   sat.verboseLogging = false;
 
   // Satellite modem startup
-  pauseTime.start();
-  while (!sat.modem.readable() && pauseTime<5) {
-  }
-  pauseTime.stop();
-  pauseTime.reset();
+  // pauseTime.start();
+  // while (!sat.modem.readable() && pauseTime<5) {
+  // }
+  // pauseTime.stop();
+  // pauseTime.reset();
   sat.saveStartLog(5);
 
   // Bluetooth start-up sequence
