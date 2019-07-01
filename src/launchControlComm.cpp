@@ -220,7 +220,9 @@ int sendClockTestResultsToLaunchControl(Serial &s) {
 void updateStatusLED() {
   switch (flight.mode) {
     case 0:
-      powerStatus = 1;
+      if (sat.validTime) {
+        powerStatus = 1;
+      } else powerStatus = !powerStatus;
       gpsStatus = sat.gpsStatus;
       satStatus = sat.iridiumStatus;
       podStatus = (podRadio.directory_length()>0); // Have any pods accepted invite?

@@ -125,6 +125,7 @@ int main() {
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
+  statusLightTicker.attach(&updateStatusLED,1.0);
   sat.verboseLogging = true;
   while (!sat.validTime) {
     sat.syncTime();
@@ -142,7 +143,7 @@ int main() {
   if (bt.modem.readable()) {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
   }
-  statusLightTicker.attach(&updateStatusLED,1.0);
+  
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
 
   podInviteTime.start();
