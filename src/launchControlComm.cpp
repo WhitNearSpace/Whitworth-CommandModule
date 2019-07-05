@@ -30,6 +30,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   } else if (strcmp(cmd,"PODLINK")==0) {
     s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
+      podRadio.clear_registry();
       char ni[21];
       int len;
       int n;
@@ -90,8 +91,9 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
   // PODDATA command
   } else if (strcmp(cmd,"PODDATA")==0) {
     s.scanf(" %i", &numOpt);
-    if (numOpt <= podRadio.registry_length()) {
-      podRadio.request_data_by_index(numOpt-1);
+    char podIndex = podRadio.pod_number_to_index(numOpt);
+    if (podIndex < podRadio.registry_length()) {
+      podRadio.request_data_by_index(podIndex);
       wait(1);
       status = sendPodDataToLaunchControl(numOpt, s, sat);
     } else {
@@ -190,9 +192,9 @@ int sendPodDataToLaunchControl(char n, Serial &s, NAL9602 & sat) {
   char data[MAX_POD_DATA_BYTES];
   char len;
   len = podRadio.get_pod_data(n, data);
+  s.printf("PODDATA %d\r\n", n);
+  s.printf("BYTES = %d\r\n", len);
   if (len>0) {
-    s.printf("PODDATA %d\r\n", n);
-    s.printf("BYTES = %d\r\n", len);
     s.printf("DATA = ");
     for (int i = 0; i < len; i++) {
       s.printf("%2X ", data[i]);
