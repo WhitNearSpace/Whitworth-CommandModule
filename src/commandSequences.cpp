@@ -20,7 +20,6 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
   int bars = 0;
   int numSats = 0;
   time_t t;  // Time structure
-  FILE* fp;
 
   // 0.  Start the clock the first time
   if (!sat.sbdMessage.attemptingSend) {
@@ -44,26 +43,8 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
       numSats = sat.getSatsUsed();
       if (numSats>3) {
         sat.sbdMessage.updatedGPS = true;
-        #ifdef DEV_MODE_LOGGING
-          time(&t);
-          fp = fopen("/local/devLog.txt", "a");
-          fprintf(fp, "%s \t GPS update success with %i satellites\r\n", ctime(&t), numSats);
-          fclose(fp);
-        #endif
       } else {
-        #ifdef DEV_MODE_LOGGING
-          time(&t);
-          fp = fopen("/local/devLog.txt", "a");
-          fprintf(fp, "%s \t GPS update failed, only %i satellites used\r\n", ctime(&t), numSats);
-          fclose(fp);
-        #endif
       }
-    } else {
-      // Log a failure message for post-flight diagnostics
-      time(&t);
-      fp = fopen("/local/log.txt", "a");
-      fprintf(fp, "%s \t GPS - no fix\r\n", ctime(&t));
-      fclose(fp);
     }
   }
   if (sat.sbdMessage.updatedGPS) successFlags = successFlags | 1;
@@ -83,12 +64,6 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
     msg_err = sat.setMessage(getBatteryVoltage(), intTempSensor.read(), extTempSensor.read());
     if (!msg_err) {
       sat.sbdMessage.messageLoaded = true;
-      #ifdef DEV_MODE_LOGGING
-        time(&t);
-        fp = fopen("/local/devLog.txt", "a");
-        fprintf(fp, "%s \t SBD message loaded into buffer\r\n", ctime(&t));
-        fclose(fp);
-      #endif
     }
   }
   if (sat.sbdMessage.messageLoaded) successFlags = successFlags | 4;
@@ -96,39 +71,23 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
   // 5.  If message is loaded, attempt transmission
   if (sat.sbdMessage.messageLoaded) {
     transmit_code = sat.transmitMessage();
-    if (transmit_code & 1) {
+    if (transmit_code == 1) {
       transmit_success = true;
-      #ifdef DEV_MODE_LOGGING
-        time(&t);
-        fp = fopen("/local/devLog.txt", "a");
-        fprintf(fp, "%s \t SBD message transmitted\r\n", ctime(&t));
-        fclose(fp);
-      #endif
     }
   }
 
   // 6.  If transmission was successful, flag and reset.  If not, check for problems.
   if (transmit_success) {
     successFlags = successFlags | 16;
-    sat.sbdMessage.doneLoading = false;
-    sat.sbdMessage.requestedPodData = false;
-    sat.sbdMessage.updatedGPS = false;
     sat.sbdMessage.messageLoaded = false;
-    sat.sbdMessage.selectedPod = 0;
+    sat.sbdMessage.doneLoading = false;
+    sat.sbdMessage.updatedGPS = false;
+    sat.sbdMessage.requestedPodData = false;
     sat.sbdMessage.timeSinceSbdRequest.stop();
   } else {
     // If message loaded and no successful transmission then there is a problem
     if (sat.sbdMessage.messageLoaded) {
-      // Log a failure message for post-flight diagnostics
-      time(&t);
       bars = sat.signalQuality();
-      fp = fopen("/local/log.txt", "a");
-      fprintf(fp, "%s \t SBD transmit failure, signal quality = %i", ctime(&t), bars);
-      if (bars) {
-        fprintf(fp, ", transmit code = %i", transmit_code);
-      }
-      fprintf(fp,"\r\n");
-      fclose(fp);
       if (bars) {
         wait(5*(float)rand()/RAND_MAX);  // if transmit failed, wait 0-5 sec (per manufacturer)
       }
@@ -137,15 +96,13 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
     // Tried to transmit for too long and failed
     if (sat.sbdMessage.timeSinceSbdRequest > sat.sbdMessage.sbdTransTimeout) {
       successFlags = successFlags | 128;  // Actually a failure flag bit
-      fprintf(fp, "%s \t SBD timeout\r\n", ctime(&t));
-      sat.sbdMessage.doneLoading = false;
-      sat.sbdMessage.requestedPodData = false;
-      sat.sbdMessage.updatedGPS = false;
       sat.sbdMessage.messageLoaded = false;
+      sat.sbdMessage.doneLoading = false;
+      sat.sbdMessage.updatedGPS = false;
+      sat.sbdMessage.requestedPodData = false;
       sat.sbdMessage.selectedPod = 0;
       sat.sbdMessage.timeSinceSbdRequest.stop();
     }
-    fclose(fp);
   }
   return successFlags;
 }
@@ -154,11 +111,16 @@ void transfer_pod_data_to_SBD(CM_to_FC &podRadio, NAL9602 &sat) {
   char data[MAX_POD_DATA_BYTES];
   char len;
   char n;
+  printf("Moving pod data from pod radio to SBD\r\n");
   for (int i = 0; i < podRadio.registry_length(); i++) {
-    n = podRadio.pod_index(i);
-    len = podRadio.get_pod_data(i+1, data);
-    sat.sbdMessage.podLengths[n-1] = len;
-    sat.sbdMessage.loadPodBuffer(n,data);
+    n = podRadio.pod_index_to_number(i);
+    if (n<MAX_FC) {
+      len = podRadio.get_pod_data(n, data);
+      sat.sbdMessage.podLengths[n-1] = len;
+      sat.sbdMessage.loadPodBuffer(n,data);
+    } else {
+      sat.sbdMessage.podLengths[n-1] = 0;
+    }
   }
   sat.sbdMessage.updateMsgLength();
 }

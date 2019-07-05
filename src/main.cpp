@@ -39,7 +39,6 @@ DigitalOut gpsStatus(p22);    // green (GPS unit powered)
 DigitalOut satStatus(p21);    // blue (Iridium radio powered)
 DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
 DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
-LocalFileSystem local("local");  // file system on microcontroller flash
 
 
 // Flight state and settings

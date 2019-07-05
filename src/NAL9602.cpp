@@ -97,7 +97,6 @@ int NAL9602::signalQuality() {
 
 // Status: Lab tested with 9602-A
 bool NAL9602::gpsUpdate() {
-  at.debug_on(1);
   bool argFilled;
   int deg, min, decmin;
   char dir[10];
@@ -181,7 +180,6 @@ bool NAL9602::gpsUpdate() {
       printf("Vertical velocity = %.2f m/s\r\n", v);
   }
   at.recv("OK");
-  at.debug_on(0);
   return coord.positionFix;
 }
 
@@ -284,6 +282,11 @@ int NAL9602::transmitMessage() {
    *   2 = error occurred while attempting to send SBD message
    *
    */
+  if (outgoingStatus==1) {
+    printf("Transmission success!\r\n\r\n");
+  } else {
+    printf("Transmission error\r\n");
+  }
   return outgoingStatus;
 }
 
