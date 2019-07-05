@@ -3,19 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-HABOSC Command Module documentation
-===================================
-
-.. toctree::
-  :maxdepth: 2
-  :caption: About HABOSC:
-
-  overview
+.. include:: ../README.rst
 
 .. toctree::
   :maxdepth: 3
   :numbered:
   :caption: Contents:
+
+  overview
 
 Indices and tables
 ==================
