@@ -1,0 +1,2 @@
+.. image:: https://img.shields.io/github/tag/johnmlarkin/whitworth-commandmodule.svg?label=version&style=plastic   :alt: GitHub tag (latest SemVer)
+.. image:: https://img.shields.io/github/license/johnmlarkin/whitworth-commandmodule.svg?style=popout   :alt: GitHub
