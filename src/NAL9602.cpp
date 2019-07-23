@@ -20,7 +20,7 @@ NAL9602::NAL9602(PinName tx_pin, PinName rx_pin, PinName ri_pin) : modem(tx_pin,
   gpsStatus = false;
   iridiumStatus = false;
   startLogLength = 0;
-
+  at.set_timeout(AT_TIMEOUT_NORMAL);
   at.oob("Invalid Position Fix", callback(this, &NAL9602::_oob_invalid_fix));
 }
 
@@ -33,27 +33,26 @@ NAL9602::~NAL9602(void) {
 // Status: Tested with terminal
 void NAL9602::satLinkOn(void) {
   at.send("AT*S1");
-  if (!at.recv("OK")) printf("satLinkOn failure\r\n");
-  iridiumStatus = true;
+  iridiumStatus = at.recv("OK");
 }
 
 // Status: Tested with terminal
 void NAL9602::satLinkOff(void) {
-  at.send("AT*S0") && at.recv("OK");
-  iridiumStatus = false;
+  at.send("AT*S0");
+  iridiumStatus = !at.recv("OK");
 }
 
 // Status: Lab tested with 9602-A
 void NAL9602::gpsOn(void) {
-  at.send("AT+PP=1") && at.recv("OK");
-  gpsStatus = true;
+  at.send("AT+PP=1");
+  gpsStatus = at.recv("OK");
 }
 
 // Status: Lab tested with 9602-A
 void NAL9602::gpsOff(void) {
-  at.send("AT+PP=0") && at.recv("OK");
+  at.send("AT+PP=0");
   coord.clearCoordinates();
-  gpsStatus = false;
+  gpsStatus = !at.recv("OK");
 }
 
 // Status: Lab tested with 9602-A
@@ -264,6 +263,7 @@ int NAL9602::transmitMessage() {
   int incomingMessageCount;
   int incomingLength;
   int queueLength;
+  at.set_timeout(AT_TIMEOUT_LONG);
   at.send("AT+SBDI");
   at.recv("AT+SBDI");
   at.recv("+SBDI:%d,%d,%d,%d,%d,%d\r\n", &outgoingStatus,
@@ -287,6 +287,7 @@ int NAL9602::transmitMessage() {
   } else {
     printf("Transmission error\r\n");
   }
+  at.set_timeout(AT_TIMEOUT_NORMAL);
   return outgoingStatus;
 }
 
@@ -406,40 +407,26 @@ void NAL9602::loadPodData(int podID, char* data) {
 int NAL9602::setMessage(float voltage, float intTemp, float extTemp) {
   char status[80];
   int err;
-  pc.printf("Inside setMessage\r\n");
-  pc.printf("Setting mission ID with %i and %i\r\n", sbdMessage.missionID, flight.mode);
+  sbdMessage.clearMessage();
   sbdMessage.setMissionID(flight.mode);
-  pc.printf("Generating GPS bytes\r\n");
   sbdMessage.generateGPSBytes(coord);
-  pc.printf("Generating command module bytes\r\n");
   sbdMessage.generateCommandModuleBytes(voltage, intTemp, extTemp);
-  pc.printf("Generating pod bytes\r\n");
   sbdMessage.generatePodBytes();
   sbdMessage.updateMsgLength();
   int n = sbdMessage.msgLength;
-  pc.printf("SBD message length is %i\r\n", n);
   if (n > 340) {
     return -1;
   } else {
     at.send("AT+SBDWB=%d", n);
     at.recv("READY");
-    // modem.printf("AT+SBDWB=%d\r", n);
-    // modem.scanf("%79s", status);
-    // while ((strcmp(status,"READY")!=0)) {
-    //   modem.scanf("%79s", status);
-    // }
     for (int i = 0; i < n; i++) {
       at.putc(sbdMessage.getByte(i));
-      // modem.printf("%c", sbdMessage.getByte(i));
     }
     unsigned short checksum = sbdMessage.generateChecksum();
     at.putc((char)(checksum/256));
     at.putc((char)(checksum%256));
-    // modem.printf("%c%c", (char)(checksum/256), (char)(checksum%256));
     at.recv("%d\r\n", &err);
     at.recv("OK");
-    // modem.scanf(" %d",&err);
-    // scanToEnd();
     switch(err) {
       case 0:
         pc.printf("SBD message successfully written to 9602\r\n");

@@ -39,6 +39,7 @@ DigitalOut gpsStatus(p22);    // green (GPS unit powered)
 DigitalOut satStatus(p21);    // blue (Iridium radio powered)
 DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
 DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
+//LocalFileSystem local("local");
 
 
 // Flight state and settings
@@ -124,7 +125,7 @@ int main() {
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
-  statusLightTicker.attach(&updateStatusLED,1.0);
+  
   sat.verboseLogging = true;
   while (!sat.validTime) {
     sat.syncTime();
@@ -146,6 +147,16 @@ int main() {
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
 
   podInviteTime.start();
+
+  // if (!bt.connected) { // No Bluetooth connection so look for saved flight.ini
+  //   printf("Preparing to enter readFlightInfo\r\n");
+  //   int err = readFlightInfo(sat, podRadio);
+  //   if (!err) {
+  //     changeModeToPending(sat);
+  //   }
+  // }
+
+  statusLightTicker.attach(&updateStatusLED,1.0);
 
   while (true) {
     switch (flight.mode) {
@@ -184,6 +195,7 @@ int main() {
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
           if (transmit_success || transmit_timeout) {
+            printf("Main understands that transmission was a success or a timeout\r\n");
             sat.sbdMessage.attemptingSend = false;
           }
         }
@@ -205,6 +217,7 @@ int main() {
         }
         if (podInviteTime > podInviteInterval) {
           podInviteTime.reset();
+          podRadio.sync_registry();
           podRadio.invite_registry();
           podRadio.test_all_clocks();
         }

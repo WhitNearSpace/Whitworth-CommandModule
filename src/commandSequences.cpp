@@ -71,6 +71,7 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
   // 5.  If message is loaded, attempt transmission
   if (sat.sbdMessage.messageLoaded) {
     transmit_code = sat.transmitMessage();
+    printf("Transmit code = %d\r\n", transmit_code);
     if (transmit_code == 1) {
       transmit_success = true;
     }
@@ -78,6 +79,7 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
 
   // 6.  If transmission was successful, flag and reset.  If not, check for problems.
   if (transmit_success) {
+    printf("Transmission was a success!\r\n");
     successFlags = successFlags | 16;
     sat.sbdMessage.messageLoaded = false;
     sat.sbdMessage.doneLoading = false;

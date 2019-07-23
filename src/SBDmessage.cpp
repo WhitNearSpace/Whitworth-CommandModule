@@ -6,6 +6,7 @@ SBDmessage::SBDmessage() {
   for (int i = 0; i < MAXPODS; i++)
     podLengths[i] = 0;
   attemptingSend = false;
+  missionID = 0;
 }
 
 SBDmessage::~SBDmessage() {

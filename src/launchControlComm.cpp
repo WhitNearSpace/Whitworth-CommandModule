@@ -48,6 +48,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
       podRadio.printDirectory();
       podRadio.printRegistry();
       sat.sbdMessage.updateMsgLength();
+      printf("PODLINK ON completed\r\n");
     } else if (strcmp(strOpt,"OFF")==0) {
       podRadio.clear_registry();
       for (int i = 0; i < MAXPODS; i++) {
@@ -117,6 +118,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     s.scanf(" %79s", strOpt);
     if (strcmp(strOpt,"ON")==0) {
       if (flight.mode<2) {
+        // saveFlightInfo(sat, podRadio);
         status = changeModeToPending(sat);
       } else {
         status = -3;
@@ -336,6 +338,7 @@ int changeModeToLanded(RN41 &bt, NAL9602 &sat) {
   podRadio.broadcast_landed();
   sat.sbdMessage.sbdTransTimeout = 0.9*POST_TRANS_PERIOD;
   sat.sbdMessage.sbdPodTimeout = 0.2*POST_TRANS_PERIOD;
+  remove("/local/flight.ini");
   return status;
 }
 
@@ -347,3 +350,92 @@ float getBatteryVoltage() {
     sum = sum + batterySensor.read();
   return sum/n*13.29;
 };
+
+// LocalFileSystem appears to be incompatible with threads
+int saveFlightInfo(NAL9602 &sat, CM_to_FC &podRadio) {
+  // FILE* fd = fopen("/local/flight.ini", "wb");
+  // if (fd) {
+  //   char buff[80];
+  //   time_t t = time(NULL);
+  //   char ni[21];
+  //   char niLength;
+  //   char podNum;
+  //   char podBytes;
+  //   *(time_t*)(buff) = t;
+  //   *(int*)(buff + 4) = sat.sbdMessage.missionID;
+  //   *(int*)(buff + 8) = flight.transPeriod;
+  //   *(float*)(buff + 12) = flight.triggerHeight;
+  //   char regLength = podRadio.registry_length();
+  //   *(char*)(buff + 16) = regLength;
+  //   fwrite(buff,sizeof(char), 17, fd);
+  //   for (int i = 0; i < regLength; i++) {
+  //     podRadio.get_registry_entry(i, &podNum, ni, &podBytes);
+  //     niLength = strlen(ni);
+  //     fputc(niLength,fd);
+  //     fwrite(ni,1,niLength, fd);
+  //     fputc(podNum, fd);
+  //     fputc(podBytes, fd);
+  //   }
+  //   fclose(fd);
+  // }
+}
+
+// LocalFileSystem appears to be incompatible with threads
+int readFlightInfo(NAL9602 &sat, CM_to_FC &podRadio) {
+  // const int headerSize = 17;
+  // int err = -1;
+  // printf("Preparing to open flight.ini\r\n");
+  // FILE* fd = fopen("/local/flight.ini", "r");
+  // if (fd) {
+  //   printf("File has been opened\r\n");
+  //   char buff[80];
+  //   time_t t;
+  //   uint32_t bytesAvailable;
+  //   uint32_t bytesRead;
+  //   char regLength;
+  //   char niLength;
+  //   char ni[21];
+  //   char podNum;
+  //   char podBytes;
+  //   int delta_t;
+  //   fseek(fd, 0, SEEK_END);
+  //   bytesAvailable = ftell(fd);
+  //   rewind(fd);
+  //   if (bytesAvailable >= headerSize) {
+  //     bytesRead = fread(buff, sizeof(char), headerSize, fd);
+  //     if (bytesRead == headerSize) {
+  //       bytesAvailable = bytesAvailable - headerSize;
+  //       t = *(time_t*)(buff);
+  //       delta_t = time(NULL) - t;
+  //       if ((delta_t>0) && (delta_t < 3*24*60*60)) { // INI not more than 3 days old
+  //         sat.sbdMessage.missionID = *(int*)(buff+4);
+  //         flight.transPeriod = *(int*)(buff+8);
+  //         flight.triggerHeight = *(float*)(buff+12);
+  //         regLength = *(char*)(buff+16);
+  //         for (int i = 0; i < regLength; i++) {
+  //           if (bytesAvailable) {
+  //             niLength = fgetc(fd);
+  //             bytesAvailable = bytesAvailable - 1;
+  //           }
+  //           if (bytesAvailable >= (niLength+2)) {
+  //             bytesRead = fread(ni, sizeof(char), niLength, fd);
+  //             ni[niLength] = 0x00;  // create null-terminated string
+  //             podNum = fgetc(fd);
+  //             podBytes = fgetc(fd);
+  //             podRadio.add_registry_entry(podNum, ni, podBytes);
+  //             sat.sbdMessage.podLengths[podNum-1] = podBytes;
+  //             bytesAvailable = bytesAvailable - niLength - 2;
+  //           }
+  //         }
+  //         podRadio.sync_registry();
+  //         sat.sbdMessage.updateMsgLength();
+  //         err = 0;
+  //       }
+  //     }
+  //   }
+  // } else {
+  //   printf("File was not found\r\n");
+  // }
+  // fclose(fd);
+  // return err;
+}

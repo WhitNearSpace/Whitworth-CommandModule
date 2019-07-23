@@ -22,6 +22,9 @@ extern Serial pc;
 #define BUFFLENGTH 400
 #define LOG_BUFF_LENGTH 400
 
+#define AT_TIMEOUT_NORMAL 5000
+#define AT_TIMEOUT_LONG   30000
+
 /** Operating modes for GPS receiver
 */
 enum gpsModes
