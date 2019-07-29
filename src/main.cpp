@@ -20,10 +20,11 @@
  *  0.1 - Terminal emulation mode only for testing of NAL9602 library
  *  0.2 - Interface with Launch Control app and more testing
  *  1.0 - Successful first flight
+ *  2.0 - Pod communication added, transitioned to RTOS
  */
 
-char versionString[] = "2.0.0-p2";
-char dateString[] = "6/27/2019";
+char versionString[] = "2.0.0";
+char dateString[] = "7/29/2019";
 
 // LPC1768 connections
 Serial pc(USBTX,USBRX);       // Serial connection via USB
@@ -125,6 +126,7 @@ int main() {
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
+  statusLightTicker.attach(&updateStatusLED,1.0);
   
   sat.verboseLogging = true;
   while (!sat.validTime) {
@@ -156,7 +158,7 @@ int main() {
   //   }
   // }
 
-  statusLightTicker.attach(&updateStatusLED,1.0);
+ 
 
   while (true) {
     switch (flight.mode) {
@@ -218,7 +220,8 @@ int main() {
         if (podInviteTime > podInviteInterval) {
           podInviteTime.reset();
           podRadio.sync_registry();
-          podRadio.invite_registry();
+          podRadio.printRegistry();
+          podRadio.invite();
           podRadio.test_all_clocks();
         }
         gps_success = false;

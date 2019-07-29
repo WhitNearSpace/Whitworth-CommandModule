@@ -338,7 +338,7 @@ int changeModeToLanded(RN41 &bt, NAL9602 &sat) {
   podRadio.broadcast_landed();
   sat.sbdMessage.sbdTransTimeout = 0.9*POST_TRANS_PERIOD;
   sat.sbdMessage.sbdPodTimeout = 0.2*POST_TRANS_PERIOD;
-  remove("/local/flight.ini");
+  // remove("/local/flight.ini");
   return status;
 }
 
