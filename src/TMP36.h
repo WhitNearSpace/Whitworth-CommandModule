@@ -7,7 +7,9 @@
 class TMP36 {
 
 public:
-    float cal;
+    float ref_voltage;  // reference voltage for analog input
+    float offset;       // voltage at 0 deg C
+    float scale;        // mV/deg C
 
     TMP36(PinName output_pin);
 

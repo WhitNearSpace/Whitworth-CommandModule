@@ -12,8 +12,8 @@
 /** Command Module Microcontroller
  *
  * @author John M. Larkin (jlarkin@whitworth.edu)
- * @version 1.0.0
- * @date 2018
+ * @version 2.0.0
+ * @date 2019
  * @copyright MIT License
  *
  * Version History:
@@ -28,7 +28,7 @@ char dateString[] = "7/29/2019";
 
 // LPC1768 connections
 Serial pc(USBTX,USBRX);       // Serial connection via USB
-RN41 bt(p9,p10);            // Bluetooth connection via RN-41
+RN41 bt(p9,p10);              // Bluetooth connection via RN-41
 NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
 CM_to_FC podRadio(p13, p14);  // XBee 802.15.4 (2.4 GHz) interface for pod communications
 DigitalOut podRadioWake(p15); // Signal XBee to move from sleep to wake mode
@@ -40,16 +40,14 @@ DigitalOut gpsStatus(p22);    // green (GPS unit powered)
 DigitalOut satStatus(p21);    // blue (Iridium radio powered)
 DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
 DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
-//LocalFileSystem local("local");
-
 
 // Flight state and settings
 struct FlightParameters flight;
 
 // Timing objects
-Timer timeSinceTrans;  // time since last SBD transmission
-Timer checkTime;       // timer in pending mode to do checks increasing altitude
-Ticker statusLightTicker;
+Timer timeSinceTrans;     // time since last SBD transmission
+Timer checkTime;          // timer in pending mode to do checks increasing altitude
+Ticker statusLightTicker; // update status LEDs periodically using this ticker
 
 
 int main() {
@@ -60,29 +58,20 @@ int main() {
   char sbdFlags; // byte of flags (bit 0 = gps, 1 = lo )
   Timer pauseTime;  // wait for things to respond but if not, move on
   Timer podInviteTime;   // time since last pod invitation sent
-  int landedIndicator = 0; // number of times has been flagged as landed
 
-  flight.mode = 0;            // flag for mode (0 = lab)
-  flight.transPeriod = 60;    // time between SBD transmissions (in s) during flight
-  flight.triggerHeight = 40; // trigger active flight if this many meters above ground
+  flight.mode = 0;              // flag for mode (0 = lab)
+  flight.transPeriod = 60;      // time between SBD transmissions (in s) during flight
+  flight.triggerHeight = 40;    // trigger active flight if this many meters above ground
+  int landedIndicator = 0;      // number of times has been flagged as landed
   const float podInviteInterval = 60;  // Send invitations to pods (when in lab or launch mode) at this interval (in seconds)
 
-  NetworkRegistration regResponse;
-  BufferStatus buffStatus;
-  int err;
-  bool success;
-
+  // Satellite modem startup
+  sat.saveStartLog(5);  // Gather any start-up output from satellite modem for 5 seconds
   sat.verboseLogging = false;
 
-  // Satellite modem startup
-  // pauseTime.start();
-  // while (!sat.modem.readable() && pauseTime<5) {
-  // }
-  // pauseTime.stop();
-  // pauseTime.reset();
-  sat.saveStartLog(5);
-
   // Bluetooth start-up sequence
+  // Cycle LED status lights while waiting for Bluetooth link
+  // If nothing found in 60 seconds, give up on Bluetooth
   powerStatus = 0;
   gpsStatus = 0;
   satStatus = 0;
@@ -112,6 +101,7 @@ int main() {
   pauseTime.reset();
   futureStatus = 0;
   powerStatus = 1;
+  statusLightTicker.attach(&updateStatusLED,1.0); // Start normal LED status light behavior (updated once per second)
 
   if (bt.connected) {
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
@@ -126,39 +116,34 @@ int main() {
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
-  statusLightTicker.attach(&updateStatusLED,1.0);
-  
-  sat.verboseLogging = true;
+
   while (!sat.validTime) {
     sat.syncTime();
     if (!sat.validTime)
       wait(15);
   }
-  sat.verboseLogging = false;
   time(&t);
+  srand(time(NULL)); // seed the random number generator with the current time (used for transmit retry delay)
   if (bt.connected) {
     bt.modem.printf("%s (UTC)\r\n", ctime(&t));
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+  } else { // No Bluetooth connection so set default
+  // In a future version I would like to read in saved mission settings from some persistent storage
+      //   int err = readFlightInfo(sat, podRadio);
+      //   if (!err) {
+      //     changeModeToPending(sat);
+      //   }
+  // The "better than nothing" version will use default settings so minimal tracking would still take place in case of power cycle mid-flight
+    sat.sbdMessage.missionID = 1;  // Default mission ID
+    changeModeToPending(sat);
   }
-  srand(time(NULL)); // seed the random number generator with the current time (used for transmit retry delay)
 
   if (bt.modem.readable()) {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
   }
   
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
-
   podInviteTime.start();
-
-  // if (!bt.connected) { // No Bluetooth connection so look for saved flight.ini
-  //   printf("Preparing to enter readFlightInfo\r\n");
-  //   int err = readFlightInfo(sat, podRadio);
-  //   if (!err) {
-  //     changeModeToPending(sat);
-  //   }
-  // }
-
- 
 
   while (true) {
     switch (flight.mode) {
@@ -169,14 +154,13 @@ int main() {
        ***********************************************************************/
       case 0:
         if (bt.modem.readable()) {
-          futureStatus = 1;
+          futureStatus = 1; // Use "future LED" to signal processing command
           parseLaunchControlInput(bt.modem, sat);
           futureStatus = 0;
         }
         if (podInviteTime > podInviteInterval) {
           podInviteTime.reset();
           podRadio.invite();
-          podRadio.printDirectory();
         }
         break;
 
@@ -197,11 +181,10 @@ int main() {
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
           if (transmit_success || transmit_timeout) {
-            printf("Main understands that transmission was a success or a timeout\r\n");
             sat.sbdMessage.attemptingSend = false;
           }
         }
-        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) { // Periodic GPS update
           checkTime.reset();
           if (!gps_success)
             gps_success = sat.gpsUpdate();
@@ -228,7 +211,12 @@ int main() {
         transmit_success = false;
         break;
 
-      case 2: // Flight mode, moving!
+      /************************************************************************
+       *  Flight mode
+       *
+       *  Can be promoted to mode 3 if meets landing condition
+       ***********************************************************************/
+      case 2:
         if ((timeSinceTrans > flight.transPeriod) || (sat.sbdMessage.attemptingSend)) {
           // If haven't already started send process, reset clock
           if (!sat.sbdMessage.attemptingSend) {
@@ -247,16 +235,21 @@ int main() {
           if (!gps_success)
             gps_success = sat.gpsUpdate();
           if (gps_success) {
-            if ((sat.altitude() < 5000) && (sat.altitude() > 0)) {
-              if (fabs(sat.verticalVelocity())<1.0)
+            if ((sat.altitude() < 5000) && (sat.altitude() > 0)) { // Is altitude plausible for landing?
+              if (fabs(sat.verticalVelocity())<1.0) // Is vertical velocity small?
                 landedIndicator++;
-              if (landedIndicator > 2*(flight.transPeriod/15))
+              if (landedIndicator > 2*(flight.transPeriod/15)) // If enough landing confirmations, transition to Landed mode
                 changeModeToLanded(bt, sat);
             }
           }
         }
         break;
 
+      /************************************************************************
+       *  Landed mode
+       *
+       *  Send SBD messages infrequently
+       ***********************************************************************/
       case 3: // Landed mode
         if ((timeSinceTrans > POST_TRANS_PERIOD) || (sat.sbdMessage.attemptingSend)) {
           // If haven't already started send process, reset clock

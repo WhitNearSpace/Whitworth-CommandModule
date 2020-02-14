@@ -38,13 +38,13 @@ Flight Computer (software library)
       - `GitHub <https://github.com/JohnMLarkin/Whitworth-CommandModule>`_
       - not yet available
     * - Mission Control
-      - `GitHub <https://github.com/JohnMLarkin/https://github.com/JohnMLarkin/Mission-Control>`_
+      - `GitHub <https://github.com/JohnMLarkin/Mission-Control>`_
       - not yet available
     * - Launch Control
       - `GitHub <https://github.com/JohnMLarkin/Whitworth-LaunchControl>`_
       - not yet available
     * - Flight Computer (HW)
-      - not yet available
+      - `GitHub <https://github.com/JohnMLarkin/FlightComputer-HW>`_
       - not yet available
     * - Flight Computer (SW)
       - `GitHub <https://github.com/JohnMLarkin/FlightComputer-SW>`_
