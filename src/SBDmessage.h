@@ -14,7 +14,7 @@
 
 
 #define SBD_LENGTH 340
-#define POD_LENGTH 255
+#define POD_LENGTH 70
 #define MAXPODS 6
 
 class SBDmessage {
@@ -72,6 +72,10 @@ public:
   */
   void testPodBytes();
 
+  /** Test extraction of pod bytes
+  */
+  char getPodBytes(char podID, char* data);
+
   /** Calculate the checksum
   */
   unsigned short generateChecksum();
@@ -97,6 +101,7 @@ public:
   Timer timeSincePodRequest;
   Timer timeSinceSbdRequest;
   float sbdTransTimeout;
+  float sbdPodTimeout;
 
 
 

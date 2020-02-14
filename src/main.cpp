@@ -1,6 +1,8 @@
-#include "mbed.h"
+#include <mbed.h>
+#include <rtos.h>
 #include "NAL9602.h"
 #include "RN41.h"
+#include <CM_to_FC.h>
 #include "TMP36.h"
 #include "launchControlComm.h"
 #include "FlightParameters.h"
@@ -10,23 +12,26 @@
 /** Command Module Microcontroller
  *
  * @author John M. Larkin (jlarkin@whitworth.edu)
- * @version 1.0.0
- * @date 2018
+ * @version 2.0.0
+ * @date 2019
  * @copyright MIT License
  *
  * Version History:
  *  0.1 - Terminal emulation mode only for testing of NAL9602 library
  *  0.2 - Interface with Launch Control app and more testing
  *  1.0 - Successful first flight
+ *  2.0 - Pod communication added, transitioned to RTOS
  */
 
-char versionString[] = "0.3";
-char dateString[] = "10/14/2018";
+char versionString[] = "2.0.0";
+char dateString[] = "7/29/2019";
 
 // LPC1768 connections
 Serial pc(USBTX,USBRX);       // Serial connection via USB
-RN41 bt(p9,p10);            // Bluetooth connection via RN-41
+RN41 bt(p9,p10);              // Bluetooth connection via RN-41
 NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
+CM_to_FC podRadio(p13, p14);  // XBee 802.15.4 (2.4 GHz) interface for pod communications
+DigitalOut podRadioWake(p15); // Signal XBee to move from sleep to wake mode
 TMP36 intTempSensor(p18);     // Internal temperature sensor
 TMP36 extTempSensor(p20);     // External temperature sensor
 AnalogIn batterySensor(p19);  // Command module battery monitor
@@ -35,15 +40,15 @@ DigitalOut gpsStatus(p22);    // green (GPS unit powered)
 DigitalOut satStatus(p21);    // blue (Iridium radio powered)
 DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
 DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
-LocalFileSystem local("local");  // file system on microcontroller flash
-
 
 // Flight state and settings
 struct FlightParameters flight;
 
 // Timing objects
-Timer timeSinceTrans;  // time since last SBD transmission
-Timer checkTime;       // timer in pending mode to do checks increasing altitude
+Timer timeSinceTrans;     // time since last SBD transmission
+Timer checkTime;          // timer in pending mode to do checks increasing altitude
+Ticker statusLightTicker; // update status LEDs periodically using this ticker
+
 
 int main() {
   time_t t;  // Time structure
@@ -51,30 +56,22 @@ int main() {
   bool transmit_success;  // Was SBD transmit a success?
   bool transmit_timeout;  // Did the SBD transmission fail to complete in time?
   char sbdFlags; // byte of flags (bit 0 = gps, 1 = lo )
-  Ticker statusTicker;  // Ticker controlling update of status LEDs
   Timer pauseTime;  // wait for things to respond but if not, move on
-  int landedIndicator = 0; // number of times has been flagged as landed
+  Timer podInviteTime;   // time since last pod invitation sent
 
-  flight.mode = 0;            // flag for mode (0 = lab)
-  flight.transPeriod = 60;    // time between SBD transmissions (in s) during flight
-  flight.triggerHeight = 40; // trigger active flight if this many meters above ground
-
-  NetworkRegistration regResponse;
-  BufferStatus buffStatus;
-  int err;
-  bool success;
-
-  sat.verboseLogging = false;
+  flight.mode = 0;              // flag for mode (0 = lab)
+  flight.transPeriod = 60;      // time between SBD transmissions (in s) during flight
+  flight.triggerHeight = 40;    // trigger active flight if this many meters above ground
+  int landedIndicator = 0;      // number of times has been flagged as landed
+  const float podInviteInterval = 60;  // Send invitations to pods (when in lab or launch mode) at this interval (in seconds)
 
   // Satellite modem startup
-  pauseTime.start();
-  while (!sat.modem.readable() && pauseTime<5) {
-  }
-  pauseTime.stop();
-  pauseTime.reset();
-  sat.saveStartLog(5);
+  sat.saveStartLog(5);  // Gather any start-up output from satellite modem for 5 seconds
+  sat.verboseLogging = false;
 
   // Bluetooth start-up sequence
+  // Cycle LED status lights while waiting for Bluetooth link
+  // If nothing found in 60 seconds, give up on Bluetooth
   powerStatus = 0;
   gpsStatus = 0;
   satStatus = 0;
@@ -104,6 +101,7 @@ int main() {
   pauseTime.reset();
   futureStatus = 0;
   powerStatus = 1;
+  statusLightTicker.attach(&updateStatusLED,1.0); // Start normal LED status light behavior (updated once per second)
 
   if (bt.connected) {
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
@@ -118,25 +116,34 @@ int main() {
     bt.modem.printf("Battery = %0.2f V\r\n", getBatteryVoltage());
     bt.modem.printf(" \r\nSynchronizing clock with satellites...\r\n");
   }
-  sat.verboseLogging = true;
+
   while (!sat.validTime) {
     sat.syncTime();
     if (!sat.validTime)
       wait(15);
   }
-  sat.verboseLogging = false;
   time(&t);
+  srand(time(NULL)); // seed the random number generator with the current time (used for transmit retry delay)
   if (bt.connected) {
     bt.modem.printf("%s (UTC)\r\n", ctime(&t));
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
+  } else { // No Bluetooth connection so set default
+  // In a future version I would like to read in saved mission settings from some persistent storage
+      //   int err = readFlightInfo(sat, podRadio);
+      //   if (!err) {
+      //     changeModeToPending(sat);
+      //   }
+  // The "better than nothing" version will use default settings so minimal tracking would still take place in case of power cycle mid-flight
+    sat.sbdMessage.missionID = 1;  // Default mission ID
+    changeModeToPending(sat);
   }
-  srand(time(NULL)); // seed the random number generator with the current time (used for transmit retry delay)
 
   if (bt.modem.readable()) {
     parseLaunchControlInput(bt.modem, sat); // really should just be handshake detect but I'm lazy (for now)
   }
-  statusTicker.attach(&updateStatusLED, 1.0);
+  
   sat.verboseLogging = false;  // "true" is causing system to hang during gpsUpdate
+  podInviteTime.start();
 
   while (true) {
     switch (flight.mode) {
@@ -147,9 +154,13 @@ int main() {
        ***********************************************************************/
       case 0:
         if (bt.modem.readable()) {
-          futureStatus = 1;
+          futureStatus = 1; // Use "future LED" to signal processing command
           parseLaunchControlInput(bt.modem, sat);
           futureStatus = 0;
+        }
+        if (podInviteTime > podInviteInterval) {
+          podInviteTime.reset();
+          podRadio.invite();
         }
         break;
 
@@ -165,7 +176,7 @@ int main() {
           if (!sat.sbdMessage.attemptingSend) {
             timeSinceTrans.reset();
           }
-          sbdFlags = send_SBD_message(bt, sat);
+          sbdFlags = send_SBD_message(bt, sat, podRadio);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
@@ -173,7 +184,7 @@ int main() {
             sat.sbdMessage.attemptingSend = false;
           }
         }
-        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) {
+        if ((checkTime > 15) && (!sat.sbdMessage.attemptingSend)) { // Periodic GPS update
           checkTime.reset();
           if (!gps_success)
             gps_success = sat.gpsUpdate();
@@ -189,17 +200,29 @@ int main() {
           parseLaunchControlInput(bt.modem, sat);
           futureStatus = 0;
         }
+        if (podInviteTime > podInviteInterval) {
+          podInviteTime.reset();
+          podRadio.sync_registry();
+          podRadio.printRegistry();
+          podRadio.invite();
+          podRadio.test_all_clocks();
+        }
         gps_success = false;
         transmit_success = false;
         break;
 
-      case 2: // Flight mode, moving!
+      /************************************************************************
+       *  Flight mode
+       *
+       *  Can be promoted to mode 3 if meets landing condition
+       ***********************************************************************/
+      case 2:
         if ((timeSinceTrans > flight.transPeriod) || (sat.sbdMessage.attemptingSend)) {
           // If haven't already started send process, reset clock
           if (!sat.sbdMessage.attemptingSend) {
             timeSinceTrans.reset();
           }
-          sbdFlags = send_SBD_message(bt, sat);
+          sbdFlags = send_SBD_message(bt, sat, podRadio);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
@@ -212,23 +235,28 @@ int main() {
           if (!gps_success)
             gps_success = sat.gpsUpdate();
           if (gps_success) {
-            if ((sat.altitude() < 5000) && (sat.altitude() > 0)) {
-              if (fabs(sat.verticalVelocity())<1.0)
+            if ((sat.altitude() < 5000) && (sat.altitude() > 0)) { // Is altitude plausible for landing?
+              if (fabs(sat.verticalVelocity())<1.0) // Is vertical velocity small?
                 landedIndicator++;
-              if (landedIndicator > 2*(flight.transPeriod/15))
+              if (landedIndicator > 2*(flight.transPeriod/15)) // If enough landing confirmations, transition to Landed mode
                 changeModeToLanded(bt, sat);
             }
           }
         }
         break;
 
+      /************************************************************************
+       *  Landed mode
+       *
+       *  Send SBD messages infrequently
+       ***********************************************************************/
       case 3: // Landed mode
         if ((timeSinceTrans > POST_TRANS_PERIOD) || (sat.sbdMessage.attemptingSend)) {
           // If haven't already started send process, reset clock
           if (!sat.sbdMessage.attemptingSend) {
             timeSinceTrans.reset();
           }
-          sbdFlags = send_SBD_message(bt, sat);
+          sbdFlags = send_SBD_message(bt, sat, podRadio);
           gps_success = sbdFlags & 1;
           transmit_success = sbdFlags & 16;
           transmit_timeout = sbdFlags & 128;
@@ -242,7 +270,7 @@ int main() {
             // Battery is running low so shut down systems
             sat.satLinkOff();
             sat.gpsOff();
-            statusTicker.detach();
+            statusLightTicker.detach();
             powerStatus = 0;
             gpsStatus = 0;
             satStatus = 0;

@@ -7,6 +7,7 @@
 #include "RN41.h"
 #include "TMP36.h"
 #include "FlightParameters.h"
+#include <string.h>
 
 /** Listener functions for Launch Control app communication
  *
@@ -22,6 +23,10 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat);
 
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat);
 
+int sendClockTestResultsToLaunchControl(Serial &s);
+
+int sendPodDataToLaunchControl(char n, Serial &s, NAL9602 & sat);
+
 float getBatteryVoltage();
 
 void updateStatusLED();
@@ -33,5 +38,9 @@ int changeModeToLab(NAL9602 &sat);
 int changeModeToFlight(RN41 &bt, NAL9602 &sat);
 
 int changeModeToLanded(RN41 &bt, NAL9602 &sat);
+
+int saveFlightInfo(NAL9602 &sat, CM_to_FC &podRadio);
+
+int readFlightInfo(NAL9602 &sat, CM_to_FC &podRadio);
 
 #endif

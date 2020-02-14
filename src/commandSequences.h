@@ -4,12 +4,11 @@
 #include "NAL9602.h"
 #include "RN41.h"
 #include "TMP36.h"
+#include <CM_to_FC.h>
 #include "launchControlComm.h"
 
-extern LocalFileSystem local;
+char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio);
 
-#define DEV_MODE_LOGGING
-
-char send_SBD_message(RN41 &bt, NAL9602 &sat);
+void transfer_pod_data_to_SBD(CM_to_FC &podRadio, NAL9602 &sat);
 
 #endif
