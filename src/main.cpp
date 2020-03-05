@@ -3,7 +3,7 @@
 #include "NAL9602.h"
 #include "RN41.h"
 #include <CM_to_FC.h>
-#include "TMP36.h"
+#include "StatusLED.h"
 #include "launchControlComm.h"
 #include "FlightParameters.h"
 #include "commandSequences.h"
@@ -12,8 +12,8 @@
 /** Command Module Microcontroller
  *
  * @author John M. Larkin (jlarkin@whitworth.edu)
- * @version 2.0.0
- * @date 2019
+ * @version 3.0.0
+ * @date 2020
  * @copyright MIT License
  *
  * Version History:
@@ -21,25 +21,54 @@
  *  0.2 - Interface with Launch Control app and more testing
  *  1.0 - Successful first flight
  *  2.0 - Pod communication added, transitioned to RTOS
+ *  3.0b - Begin rewrite for modular hardware and RockBlock vs NAL 9602 
  */
 
-char versionString[] = "2.0.0";
-char dateString[] = "7/29/2019";
+char versionString[] = "3.0.0";
+char dateString[] = "2/14/2020";
 
-// LPC1768 connections
-Serial pc(USBTX,USBRX);       // Serial connection via USB
-RN41 bt(p9,p10);              // Bluetooth connection via RN-41
-NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
-CM_to_FC podRadio(p13, p14);  // XBee 802.15.4 (2.4 GHz) interface for pod communications
-DigitalOut podRadioWake(p15); // Signal XBee to move from sleep to wake mode
-TMP36 intTempSensor(p18);     // Internal temperature sensor
-TMP36 extTempSensor(p20);     // External temperature sensor
-AnalogIn batterySensor(p19);  // Command module battery monitor
-DigitalOut powerStatus(p24);  // red (command module powered)
-DigitalOut gpsStatus(p22);    // green (GPS unit powered)
-DigitalOut satStatus(p21);    // blue (Iridium radio powered)
-DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
-DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
+// LPC1768 connections (active)
+Serial pc(USBTX,USBRX);           // Serial connection via USB
+SPI spi(p5, p6, p7);              // Shared SPI master
+I2C i2c(p9,p10);                  // Shared I2C master
+DigitalIn serialAlert(p11);       // Alert: there is inbound serial communication from multiplexer
+DigitalOut podRadioWake(p12);     // Send wake signal to XBee pod link
+StatusLED ledA(p21);                 // External indicator LED A
+StatusLED ledB(p22);                 // External indicator LED B
+StatusLED ledC(p23);                 // External indicator LED C
+DigitalOut audioAlert(p24);       // Audio alert control
+
+/*************************************************************************************************
+ * LPC1768 connections (inactive)
+ * 
+ * p8 is currently unassigned
+ * CM_to_FC podRadio(p13, p14);      // XBee 802.15.4 (2.4 GHz) interface for pod communications
+ * DigitalOut groundRadioWake(p15);  // Send wake signal to XBee ground link
+ * AnalogIn analogIn0(p16);
+ * AnalogIn analogIn1(p17);
+ * AnalogIn analogIn2(p18);          // Could also be an analog output
+ * PwmOut pwm(p25);
+ * RB9603 sat(p28, p27, p19, p20, p30, p26, p29); // RockBlock 9603 interface object  
+*************************************************************************************************/
+
+// Shared connections
+// RN41 bt(i2c)
+
+/*************************************************************************************************
+ * old LPC1768 connections
+ * RN41 bt(p9,p10);              // Bluetooth connection via RN-41
+ * NAL9602 sat(p28,p27);         // NAL 9602 modem interface object
+ * CM_to_FC podRadio(p13, p14);  // XBee 802.15.4 (2.4 GHz) interface for pod communications
+ * DigitalOut podRadioWake(p15); // Signal XBee to move from sleep to wake mode
+ * TMP36 intTempSensor(p18);     // Internal temperature sensor
+ * TMP36 extTempSensor(p20);     // External temperature sensor
+ * AnalogIn batterySensor(p19);  // Command module battery monitor
+ * DigitalOut powerStatus(p24);  // red (command module powered)
+ * DigitalOut gpsStatus(p22);    // green (GPS unit powered)
+ * DigitalOut satStatus(p21);    // blue (Iridium radio powered)
+ * DigitalOut podStatus(p23);    // amber, clear (XBee connection to pods)
+ * DigitalOut futureStatus(p25); // amber, opaque (currently used to indicate when parsing command from BT)
+*************************************************************************************************/
 
 // Flight state and settings
 struct FlightParameters flight;
@@ -47,11 +76,11 @@ struct FlightParameters flight;
 // Timing objects
 Timer timeSinceTrans;     // time since last SBD transmission
 Timer checkTime;          // timer in pending mode to do checks increasing altitude
-Ticker statusLightTicker; // update status LEDs periodically using this ticker
 
 
 int main() {
   time_t t;  // Time structure
+  bool savedFlightParameters = false;
   bool gps_success;  // Was GPS update a success?
   bool transmit_success;  // Was SBD transmit a success?
   bool transmit_timeout;  // Did the SBD transmission fail to complete in time?
@@ -66,42 +95,31 @@ int main() {
   const float podInviteInterval = 60;  // Send invitations to pods (when in lab or launch mode) at this interval (in seconds)
 
   // Satellite modem startup
-  sat.saveStartLog(5);  // Gather any start-up output from satellite modem for 5 seconds
-  sat.verboseLogging = false;
+  // sat.saveStartLog(5);  // Gather any start-up output from satellite modem for 5 seconds
+  // sat.verboseLogging = false;
+
+  // Initiate LED Status Lights
+  ledA = quick_flash; // waiting for Bluetooth
+  ledB = off;         // No GPS activity
+  ledC = off;         // No pod link activity
 
   // Bluetooth start-up sequence
-  // Cycle LED status lights while waiting for Bluetooth link
-  // If nothing found in 60 seconds, give up on Bluetooth
-  powerStatus = 0;
-  gpsStatus = 0;
-  satStatus = 0;
-  podStatus = 0;
+  // Wait for Bluetooth link. If not found in 60 seconds, check for saved flight parameters.
+  // Repeat until either linked or flight parameters found.
   pauseTime.start();
-  while (!bt.modem.readable() && pauseTime < 60) {
-    futureStatus = 0;
-    powerStatus = 1;
-    wait(0.2);
-    powerStatus = 0;
-    gpsStatus = 1;
-    wait(0.2);
-    gpsStatus = 0;
-    satStatus = 1;
-    wait(0.2);
-    satStatus = 0;
-    podStatus = 1;
-    wait(0.2);
-    podStatus = 0;
-    futureStatus = 1;
-    wait(0.2);
-  }
-  if (pauseTime < 60) {
-    bt.connected = true;
+  while ((!bt.connected) && (!savedFlightParameters)) {
+    while ((!bt.modem.readable()) && (pauseTime < 60)) {
+      wait(0.2);
+    }
+    if (pauseTime < 60) {
+      bt.connected = true;
+      ledA = steady;
+    } else {
+      // No Bluetooth connnection so should try to load previous flight parameters
+    }
+    pauseTime.reset();
   }
   pauseTime.stop();
-  pauseTime.reset();
-  futureStatus = 0;
-  powerStatus = 1;
-  statusLightTicker.attach(&updateStatusLED,1.0); // Start normal LED status light behavior (updated once per second)
 
   if (bt.connected) {
     bt.modem.printf("\r\n----------------------------------------------------------------------------------------------------\r\n");
