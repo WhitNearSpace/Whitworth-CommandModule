@@ -1,7 +1,8 @@
 /****************************************************************************
  * Class for interfacing with a Ublox GPS module via I2C (DDC)
  * 
- * Written for Mbed OS by John M. Larkin (February 17, 2020)
+ * Written for Mbed OS 5 by John M. Larkin (February 2020)
+ * Updated for Mbed OS 6 by John M. Larkin (July 2021)
  * 
  * Based on the Arduino library of Nathan Seidle @ SparkFun Electronics 
  * Arduino -> mbed Changes:
@@ -14,7 +15,7 @@
  * Released under the MIT License (http://opensource.org/licenses/MIT).
  * 	
  * The MIT License (MIT)
- * Copyright (c) 2020 John M. Larkin
+ * Copyright (c) 2021 John M. Larkin
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
  * associated documentation files (the "Software"), to deal in the Software without restriction, 
  * including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
@@ -44,6 +45,9 @@
 
 
 #include <mbed.h>
+#include <chrono>
+
+using namespace std::chrono;
 
 #ifndef MAX_PAYLOAD_SIZE
 #define MAX_PAYLOAD_SIZE 256 //We need ~220 bytes for getProtocolVersion on most ublox modules
@@ -374,7 +378,7 @@ const uint8_t VAL_ID_I2C_ADDRESS = 0x01;
 class Ublox_GPS
 {
 public:
-	Ublox_GPS(I2C& i2c, uint8_t deviceAddress = 0x42);
+	Ublox_GPS(I2C* i2c, uint8_t deviceAddress = 0x42);
   bool isConnected(); //Returns true if device answers on _gpsI2Caddress address
   bool checkUblox();		//Checks module with user selected commType
 	bool checkUbloxI2C();	//Method for I2C polling of data, passing any new bytes to process()
@@ -589,7 +593,7 @@ public:
 	//void debugPrintln(char *message);				   //Safely print debug statements
   void debugPrintln(const char* message);
 
-  void setNMEAOutputPort(Serial &nmeaOutputPort);	//Sets the internal variable for the port to direct NMEA characters to
+  void setNMEAOutputPort(BufferedSerial &nmeaOutputPort);	//Sets the internal variable for the port to direct NMEA characters to
 
 	const char *statusString(UbloxStatus_e stat); //Pretty print the return value
 
@@ -648,7 +652,7 @@ private:
 	void addToChecksum(uint8_t incoming);	  //Given an incoming byte, adjust rollingChecksumA/B
 
 	//Variables
-	I2C& _i2c;				//The generic connection to user's chosen I2C hardware
+	I2C* _i2c;				//The generic connection to user's chosen I2C hardware
   Timer _pollingTimer; // Timer for polling delays
 
 	uint8_t _gpsI2Caddress = 0x42; //Default 7-bit unshifted address of the ublox 6/7/8/M8/F9 series
@@ -667,7 +671,7 @@ private:
 	//Limit checking of new data to every X ms
 	//If we are expecting an update every X Hz then we should check every half that amount of time
 	//Otherwise we may block ourselves from seeing new data
-	uint8_t i2cPollingWait = 100; //Default to 100ms. Adjusted when user calls setNavigationFrequency()
+	std::chrono::milliseconds i2cPollingWait = 100ms; //Default to 100ms. Adjusted when user calls setNavigationFrequency()
 
 	unsigned long lastCheck = 0;
 	bool autoPVT = false;			  //Whether autoPVT is enabled or not
@@ -723,7 +727,7 @@ private:
 
 	uint16_t rtcmLen = 0;
 
-  Serial *_nmeaOutputPort = NULL; //The user can assign an output port to print NMEA sentences if they wish
+  BufferedSerial *_nmeaOutputPort = NULL; //The user can assign an output port to print NMEA sentences if they wish
 
   // Arduino specific, needs translation
   /*

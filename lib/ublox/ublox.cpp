@@ -33,7 +33,8 @@
 #include "ublox.h"
 
 
-Ublox_GPS::Ublox_GPS(I2C& i2c, uint8_t deviceAddress) : _i2c(i2c) {
+Ublox_GPS::Ublox_GPS(I2C* i2c, uint8_t deviceAddress) {
+  _i2c = i2c;
   commType = COMM_TYPE_I2C;
   _gpsI2Caddress = deviceAddress; // Store the I2C address from user
   currentGeofenceParams.numFences = 0; // Zero the number of geofences currently in use
@@ -177,7 +178,7 @@ bool Ublox_GPS::setI2CAddress(uint8_t deviceAddress, uint16_t maxWait)
 }
 
 //Want to see the NMEA messages on a Serial port? Here's how
-void Ublox_GPS::setNMEAOutputPort(Serial &nmeaOutputPort)
+void Ublox_GPS::setNMEAOutputPort(BufferedSerial &nmeaOutputPort)
 {
   _nmeaOutputPort = &nmeaOutputPort; //Store the port from user
 }
@@ -203,25 +204,25 @@ bool Ublox_GPS::checkUbloxI2C()
   char cmd[MAX_PAYLOAD_SIZE];
   char nak;
   char addr = _gpsI2Caddress<<1; // We need 8-bit version of address
-  _i2c.lock();
-  if (_pollingTimer.read_ms() >= i2cPollingWait)
+  _i2c->lock();
+  if (_pollingTimer.elapsed_time() >= i2cPollingWait)
   {
     //Get the number of bytes available from the module
     uint16_t bytesAvailable = 0;
     cmd[0] = 0xFD; //0xFD (MSB) and 0xFE (LSB) are the registers that contain number of bytes available
-    nak = _i2c.write(addr, cmd, 1, true); // Do not send STOP signal
+    nak = _i2c->write(addr, cmd, 1, true); // Do not send STOP signal
     if (nak) {
-      _i2c.unlock();
+      _i2c->unlock();
       return false;
     }
 
-    nak = _i2c.read(addr, cmd, 2);
+    nak = _i2c->read(addr, cmd, 2);
     if (!nak) {
       if (cmd[1] == 0xFF) {
         // Nathan Seidle (SparkFun) believes this is a Ublox bug. Device should never present an 0xFF.
         debugPrintln("checkUbloxI2C: Ublox bug, no bytes available");
         _pollingTimer.reset();
-        _i2c.unlock();
+        _i2c->unlock();
         return false;
       }
       bytesAvailable = cmd[0] << 8 | cmd[1];
@@ -231,7 +232,7 @@ bool Ublox_GPS::checkUbloxI2C()
     {
       debugPrintln("checkUbloxI2C: OK, zero bytes available");
       _pollingTimer.reset();
-      _i2c.unlock();
+      _i2c->unlock();
       return false;
     }
 
@@ -272,20 +273,20 @@ bool Ublox_GPS::checkUbloxI2C()
         bytesToRead = MAX_PAYLOAD_SIZE;
       } else bytesToRead = bytesAvailable;
       cmd[0] = 0xFF; //0xFF is the register to read data from
-      nak = _i2c.write(addr, cmd, 1, true);
+      nak = _i2c->write(addr, cmd, 1, true);
       if (nak) {
-        _i2c.unlock();
+        _i2c->unlock();
         return false;
       }
-      nak = _i2c.read(addr, cmd, bytesToRead);
+      nak = _i2c->read(addr, cmd, bytesToRead);
       if (nak) {
-        _i2c.unlock();
+        _i2c->unlock();
         return false;
       }
       if ((firstRead) && (cmd[0] == 0x7F)) {
         debugPrintln("checkUbloxU2C: Ublox error, module not ready with data");
         led = 1;
-        _i2c.unlock();
+        _i2c->unlock();
         return false;
       }
       for (int i = 0; i < bytesToRead; i++)
@@ -294,7 +295,7 @@ bool Ublox_GPS::checkUbloxI2C()
       bytesAvailable -= bytesToRead;
     }
   }
-  _i2c.unlock();
+  _i2c->unlock();
   return true;
 } //end checkUbloxI2C()
 
@@ -380,7 +381,7 @@ void Ublox_GPS::processNMEA(char incoming)
 {
   //If user has assigned an output port then pipe the characters there
   if (_nmeaOutputPort != NULL)
-    _nmeaOutputPort->putc(incoming); //Echo this byte to the serial port
+    _nmeaOutputPort->write(&incoming,1); //Echo this byte to the serial port
 }
 
 //We need to be able to identify an RTCM packet and then the length
@@ -703,13 +704,13 @@ UbloxStatus_e Ublox_GPS::sendI2cCommand(ubxPacket outgoingUBX, uint16_t maxWait)
   char buf[MAX_PAYLOAD_SIZE];
   char nak;
   char addr = _gpsI2Caddress<<1; // We need 8-bit version of address
-  _i2c.lock(); // Lock I2C connection during this method
+  _i2c->lock(); // Lock I2C connection during this method
 
   //Point at 0xFF data register
   buf[0] = 0xFF;
-  nak = _i2c.write(addr, buf, 1);
+  nak = _i2c->write(addr, buf, 1);
   if (nak) {
-    _i2c.unlock();
+    _i2c->unlock();
     return UBLOX_STATUS_I2C_COMM_FAILURE;
   }
 
@@ -720,9 +721,9 @@ UbloxStatus_e Ublox_GPS::sendI2cCommand(ubxPacket outgoingUBX, uint16_t maxWait)
   buf[3] = outgoingUBX.id;
   buf[4] = outgoingUBX.len & 0xFF;
   buf[5] = outgoingUBX.len >> 8;
-  nak = _i2c.write(addr, buf, 6, false);  
+  nak = _i2c->write(addr, buf, 6, false);  
   if (nak) {
-    _i2c.unlock();
+    _i2c->unlock();
     return UBLOX_STATUS_I2C_COMM_FAILURE;
   }
 
@@ -742,9 +743,9 @@ UbloxStatus_e Ublox_GPS::sendI2cCommand(ubxPacket outgoingUBX, uint16_t maxWait)
     for (uint16_t x = 0; x < len; x++) {
       buf[x] = outgoingUBX.payload[startSpot + x];
     }
-    nak = _i2c.write(addr, buf, len, false);  
+    nak = _i2c->write(addr, buf, len, false);  
     if (nak) {
-      _i2c.unlock();
+      _i2c->unlock();
       return UBLOX_STATUS_I2C_COMM_FAILURE;
     }
 
@@ -758,13 +759,13 @@ UbloxStatus_e Ublox_GPS::sendI2cCommand(ubxPacket outgoingUBX, uint16_t maxWait)
     buf[0] = outgoingUBX.payload[startSpot];
     buf[1] = outgoingUBX.checksumA;
     buf[2] = outgoingUBX.checksumB;
-    nak = _i2c.write(addr, buf, 3);
+    nak = _i2c->write(addr, buf, 3);
   } else {
     buf[0] = outgoingUBX.checksumA;
     buf[1] = outgoingUBX.checksumB;
-    nak = _i2c.write(addr, buf, 2);
+    nak = _i2c->write(addr, buf, 2);
   }
-  _i2c.unlock();
+  _i2c->unlock();
   if (nak) {
     return UBLOX_STATUS_I2C_COMM_FAILURE;
   } else {
@@ -780,7 +781,7 @@ bool Ublox_GPS::isConnected()
     char addr = _gpsI2Caddress<<1; // Create 8-bit version of address
     char buf[1];
     char nak;
-    nak = _i2c.write(addr, buf, 0); // Does a zero byte "write" achieve goal?
+    nak = _i2c->write(addr, buf, 0); // Does a zero byte "write" achieve goal?
     return (nak == 0);
   }
   else if (commType == COMM_TYPE_SERIAL)
@@ -891,7 +892,7 @@ UbloxStatus_e Ublox_GPS::waitForACKResponse(uint8_t requestedClass, uint8_t requ
   packetAck.valid = false;
 
   _pollingTimer.reset();
-  while (_pollingTimer.read_ms() < maxTime)
+  while (_pollingTimer.elapsed_time() < std::chrono::milliseconds(maxTime))
   {
     if (checkUblox() == true) //See if new data is available. Process bytes as they come in.
     {
@@ -900,7 +901,7 @@ UbloxStatus_e Ublox_GPS::waitForACKResponse(uint8_t requestedClass, uint8_t requ
       {
         if (_printDebug == true)
         {
-          printf("waitForACKResponse: ACK received after %d ms\r\n", _pollingTimer.read_ms());
+          printf("waitForACKResponse: ACK received after %d ms\r\n", std::chrono::duration_cast<milliseconds>(_pollingTimer.elapsed_time()).count());
         }
 
         //Are we expecting data back or just an ACK?
@@ -913,7 +914,7 @@ UbloxStatus_e Ublox_GPS::waitForACKResponse(uint8_t requestedClass, uint8_t requ
             {
               if (_printDebug == true)
               {
-                printf("waitForACKResponse: CLS/ID match after %d ms\r\n", _pollingTimer.read_ms());
+                printf("waitForACKResponse: CLS/ID match after %d ms\r\n", std::chrono::duration_cast<milliseconds>(_pollingTimer.elapsed_time()).count());
               }
               return (UBLOX_STATUS_DATA_RECEIVED); //Received a data and a correct ACK!
             }
@@ -942,14 +943,14 @@ UbloxStatus_e Ublox_GPS::waitForACKResponse(uint8_t requestedClass, uint8_t requ
       {
         if (_printDebug == true)
         {
-          printf("waitForACKResponse: NACK received after %d ms\r\n", _pollingTimer.read_ms());
+          printf("waitForACKResponse: NACK received after %d ms\r\n", std::chrono::duration_cast<milliseconds>(_pollingTimer.elapsed_time()).count());
         }
         return (UBLOX_STATUS_COMMAND_UNKNOWN); //Received a NACK
       }
     } //checkUblox == true
 
     wait_us(500);
-  } //while (_pollingTimer.read_ms() < maxTime)
+  } //while (_pollingTimer.elapsed_time() < std::chrono::milliseconds(maxTime))
 
   //TODO add check here if config went valid but we never got the following ack
   //Through debug warning, This command might not get an ACK
@@ -960,7 +961,7 @@ UbloxStatus_e Ublox_GPS::waitForACKResponse(uint8_t requestedClass, uint8_t requ
 
   if (_printDebug == true)
   {
-    printf("waitForACKResponse: timeout after %d ms. No ack packet received.\r\n", _pollingTimer.read_ms());
+    printf("waitForACKResponse: timeout after %d ms. No ack packet received.\r\n", std::chrono::duration_cast<milliseconds>(_pollingTimer.elapsed_time()).count());
   }
 
   return (UBLOX_STATUS_TIMEOUT);
@@ -977,7 +978,7 @@ UbloxStatus_e Ublox_GPS::waitForNoACKResponse(uint8_t requestedClass, uint8_t re
   packetCfg.id = 255;
 
   _pollingTimer.reset();
-  while (_pollingTimer.read_ms() < maxTime)
+  while (_pollingTimer.elapsed_time() < std::chrono::milliseconds(maxTime))
   {
     if (checkUblox() == true) //See if new data is available. Process bytes as they come in.
     {
@@ -989,7 +990,7 @@ UbloxStatus_e Ublox_GPS::waitForNoACKResponse(uint8_t requestedClass, uint8_t re
         {
           if (_printDebug == true)
           {
-            printf("waitForNoACKResponse: CLS/ID match after %d ms\r\n", _pollingTimer.read_ms());
+            printf("waitForNoACKResponse: CLS/ID match after %d ms\r\n", std::chrono::duration_cast<milliseconds>(_pollingTimer.elapsed_time()).count());
           }
           return (UBLOX_STATUS_DATA_RECEIVED); //We have new data to act upon
         }
@@ -1020,7 +1021,7 @@ UbloxStatus_e Ublox_GPS::waitForNoACKResponse(uint8_t requestedClass, uint8_t re
 
   if (_printDebug == true)
   {
-    printf("waitForNoACKResponse: timeout after %d ms. No packet received.\r\n", _pollingTimer.read_ms());
+    printf("waitForNoACKResponse: timeout after %d ms. No packet received.\r\n", std::chrono::duration_cast<milliseconds>(_pollingTimer.elapsed_time()).count());
   }
 
   return (UBLOX_STATUS_TIMEOUT);
@@ -1625,10 +1626,9 @@ bool Ublox_GPS::setI2COutput(uint8_t comSettings, uint16_t maxWait)
 //Max is 40Hz(?!)
 bool Ublox_GPS::setNavigationFrequency(uint8_t navFreq, uint16_t maxWait)
 {
-  //if(updateRate > 40) updateRate = 40; //Not needed: module will correct out of bounds values
 
   //Adjust the I2C polling timeout based on update rate
-  i2cPollingWait = 1000 / (navFreq * 4); //This is the number of ms to wait between checks for new I2C data
+  i2cPollingWait = std::chrono::milliseconds(1000 / (navFreq * 4)); //This is the time to wait between checks for new I2C data
 
   //Query the module for the latest lat/long
   packetCfg.cls = UBX_CLASS_CFG;

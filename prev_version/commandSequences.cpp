@@ -90,8 +90,9 @@ char send_SBD_message(RN41 &bt, NAL9602 &sat, CM_to_FC &podRadio) {
     // If message loaded and no successful transmission then there is a problem
     if (sat.sbdMessage.messageLoaded) {
       bars = sat.signalQuality();
-      if (bars) {
-        wait(5*(float)rand()/RAND_MAX);  // if transmit failed, wait 0-5 sec (per manufacturer)
+      if (bars) { // if transmit failed, wait 0-5 sec (per manufacturer)
+        std::chrono::seconds random_delay(rand() % 6);
+        ThisThread::sleep_for(random_delay);
       }
     }
 

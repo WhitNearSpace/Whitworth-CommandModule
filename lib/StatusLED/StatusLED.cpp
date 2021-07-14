@@ -36,27 +36,27 @@ void StatusLED::mode(LED_Modes newMode)
 
 void StatusLED::_updateLED()
 {
-  float wait_time;
+  int wait_time; // a time in milliseconds
   while (true) {
     switch (_mode) {
       case quick_flash:
         _pwm = !_pwm;
-        wait_time = 0.1;
+        wait_time = 100;
         break;
       case slow_flash:
         _pwm = !_pwm;
-        wait_time = 1.0;
+        wait_time = 1000;
         break;
       case breathing:
         if (_pwm<=0) _delta = DELTA_SIZE;
         if (_pwm>=1) _delta = -DELTA_SIZE;
         _pwm = _pwm + _delta;
-        wait_time = 0.05;
+        wait_time = 50;
         break;
       default:
-        wait_time = 0.1;
+        wait_time = 100;
     }
-    wait(wait_time);
+    ThisThread::sleep_for(std::chrono::milliseconds(wait_time));
   }
 }
 

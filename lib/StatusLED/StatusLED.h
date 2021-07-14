@@ -25,7 +25,7 @@ private:
   PwmOut _pwm;
   volatile LED_Modes _mode; // volatile because modified outside of _updateLED thread
   Thread _led_thread;
-  float _delta;
+  float _delta; // duty cycle step size for breathing mode
   void _updateLED();   
 };
 
