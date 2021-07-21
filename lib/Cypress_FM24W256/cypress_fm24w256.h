@@ -42,8 +42,8 @@ public:
   // write functions
   int write(uint16_t mem_addr, char data);
   int write_uint16(uint16_t mem_addr, uint16_t data);
-  // int write_uint16(uint16_t data);
-  // int write_int16(uint16_t mem_addr, int16_t data);
+  //int write_uint16(uint16_t data);
+  int write_int16(uint16_t mem_addr, int16_t data);
   // int write_int16(int16_t data);
   // int write(uint16_t mem_addr, const char* data, int length);
   // int write(char data);
@@ -54,8 +54,8 @@ public:
   FRAM_Response_Read_Byte read(uint16_t mem_addr);
   FRAM_Response_Read_Byte read();
   FRAM_Response_Read_Uint16 read_uint16(uint16_t mem_addr);
-  // FRAM_Response_Read_Uint16 read_uint16();
-  // FRAM_Response_Read_Int16 read_int16(int16_t mem_addr);
+  FRAM_Response_Read_Uint16 read_uint16();
+  FRAM_Response_Read_Int16 read_int16(int16_t mem_addr);
   // FRAM_Response_Read_Int16 read_int16();
   // int read(uint16_t mem_addr, char* data, int length);
   // int read(char* data, int length);

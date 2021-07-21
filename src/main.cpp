@@ -21,16 +21,19 @@ int main() {
   int code;
   FRAM_Response_Read_Byte response;
   FRAM_Response_Read_Uint16 uint16_response;
+  FRAM_Response_Read_Int16 int16_response;
   ThisThread::sleep_for(100ms);
   trial_addr = generate_trial_address();
   char data_byte = 0x2B;
   printf("Attempting to write %#02x to address %04x\n", data_byte, trial_addr);
   code = fram.write(trial_addr, data_byte);
   printf("Response code is %d\n\n", code);
-  // data_byte = 0x3C; //next byte
-  // printf("Attempting to write %#02x to next address\n", data_byte);
-  // code = fram.write(data_byte); //next byte write
-  // printf("Response code is %d\n\n", code);
+
+  data_byte = 0x3C; //next byte
+  printf("Attempting to write %#02x to next address\n", data_byte);
+  code = fram.write((trial_addr + 1), data_byte); //next byte write
+  printf("Response code is %d\n\n", code);
+
   printf("Attempting to read from address %04x\n", trial_addr);
   response = fram.read(trial_addr);
   printf("Response code is %d\n", response.status);
@@ -38,20 +41,40 @@ int main() {
     printf("Retrieved data is %#02x\n", response.data);
   printf("\n");
 
-  //uint16_t data write test
-  uint16_t uint16_data= 0x140C;
+  printf("Attempting to read from next adress\n");
+  response = fram.read();
+  printf("Response code is %d\n", response.status);
+  if (response.status == FRAM_SUCCESS)
+    printf("Retrieved data is %#02x\n", response.data);
+  printf("\n");
+
+  //uint16t data write test
+  uint16_t uint16_data= 0x140d;
   printf("Attempting to write %#02x to address %04x\n", uint16_data, trial_addr);
   code = fram.write_uint16(trial_addr, uint16_data);
   printf("Response code is %d\n\n", code);
 
-//uint_16 read test
+//uint16 read test
   printf("Attempting to read from address %04x\n", trial_addr);
   uint16_response = fram.read_uint16(trial_addr);
-  printf("Response code is %d\n", response.status);
+  printf("Response code is %d\n", uint16_response.status);
   if (uint16_response.status == FRAM_SUCCESS)
     printf("Retrieved data is %#02x\n", uint16_response.data);
   printf("\n");
 
+//int16 write test
+  int16_t int16_data= 0x2345;
+  printf("Attempting to write %#02x to address %04x\n", int16_data, trial_addr);
+  code = fram.write_int16(trial_addr, int16_data);
+  printf("Response code is %d\n\n", code);
+
+//int16 read test
+  printf("Attempting to read from address %04x\n", trial_addr);
+  int16_response = fram.read_int16(trial_addr);
+  printf("Response code is %d\n", int16_response.status);
+  if (int16_response.status == FRAM_SUCCESS)
+    printf("Retrieved data is %#02x\n", int16_response.data);
+  printf("\n");
 
   while (true) {
     led1 = !led1;
