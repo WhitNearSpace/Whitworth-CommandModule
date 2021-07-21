@@ -6,11 +6,11 @@
  *  - Incomplete
  *  - Ready for testing
  *  - Tested with terminal
- *  - Lab tested with 9602-A
+ *  - Lab tested with 9603
  *  - Flight tested
  */
 
-// Status: Ready for testing
+// Status: Tested with terminal
 RockBlock9603::RockBlock9603(PinName tx_pin, PinName rx_pin, PinName ri_pin) {
   _serial = new BufferedSerial(tx_pin, rx_pin, 19200);
   _at = new ATCmdParser(_serial, "\r");
@@ -20,9 +20,11 @@ RockBlock9603::RockBlock9603(PinName tx_pin, PinName rx_pin, PinName ri_pin) {
   messageAvailable = false;
   validTime = false;
   verboseLogging = false;
-  iridiumStatus = false;
+  iridiumStatus = true;
   startLogLength = 0;
   _at->set_timeout(AT_TIMEOUT_NORMAL);
+  _at->send("AT&K0");
+  _at->recv("OK");
   // at.oob("Invalid Position Fix", callback(this, &NAL9602::_oob_invalid_fix));
 }
 
@@ -32,8 +34,20 @@ RockBlock9603::~RockBlock9603(void) {
   /* TBC */
 }
 
+// Status: Tested with terminal
+void RockBlock9603::radio_on(void) {
+  _at->send("AT*R1");
+  iridiumStatus = _at->recv("OK");
+}
+
+// Status: Tested with terminal
+void RockBlock9603::radio_off(void) {
+  _at->send("AT*R0");
+  iridiumStatus = !_at->recv("OK");
+}
+
 // Status: Ready for testing
-void RockBlock9603::echoModem(std::chrono::duration listenTime) {
+void RockBlock9603::echo_until_timeout(milliseconds listenTime) {
   Timer t;
   char buff[BUFFLENGTH];
   unsigned int i = 0;
@@ -45,7 +59,7 @@ void RockBlock9603::echoModem(std::chrono::duration listenTime) {
       i++;
     }
     while ((j<i) && (!_serial->readable())) {
-      printf(buff[j]);
+      printf("%c",buff[j]);
       j++;
     }
     for (unsigned int k = 0; k<j; k++) {
@@ -54,6 +68,132 @@ void RockBlock9603::echoModem(std::chrono::duration listenTime) {
       j = 0;
     }
   }
+}
+
+void RockBlock9603::echo_until_OK() {
+  char buf[80] = {0};
+  unsigned int i = 0;
+  char c;
+  bool doneLeadingWS = false;
+  bool done = false;
+  while ((buf[0] != 'O') && (buf[1] != 'K')) { // does buf start "OK"?
+    while (!done) { // "line" is defined to be printable-char surrounded by non-printable
+      c = _at->getc();
+      if (!doneLeadingWS) { // ignore leading non-printables
+        if ((c >= 0x20) && (c <= 0x7E)) { // printable char range
+          doneLeadingWS = true;
+        }
+      } else if (c < 0x20) { // done if find trailing non-printables
+        done = true;
+      }
+      if ((c >= 0x20) && (c <= 0x7E)) {
+        if (i < sizeof(buf)-1) { // don't overflow the buffer!
+          buf[i] = c;
+          i++;
+        }
+      }
+    }
+    buf[i] = 0; // terminate the string
+    if ((buf[0] != 'O') && (buf[1] != 'K')) printf("\t%s\n", buf);
+    doneLeadingWS = false;
+    done =false;
+    i = 0;
+  }
+}
+
+// Status: Tested with terminal
+void RockBlock9603::dump_manufacturer() {
+  char buf[80];
+  _at->send("AT+GMI");
+  if (_at->recv("AT+GMI")) {
+    _at->recv("%79s\r\n", buf);
+    _at->recv("OK");
+    printf("Manufacturer = %s\n", buf);
+  } else {
+    printf("Error reading manufacturer from RockBlock\n");
+  }
+}
+
+// // Status: Tested with terminal
+void RockBlock9603::dump_model() {
+  printf("Model:");
+  _at->send("AT+GMM");
+  _at->recv("AT+GMM");
+  // Normal recv doesn't work for some reason on model string
+  echo_until_OK();
+}
+
+// // Status: Tested with terminal
+void RockBlock9603::dump_revision() {
+  printf("Iridium revision info\n");
+  _at->send("AT+GMR");
+  _at->recv("AT+GMR");
+  echo_until_OK();
+}
+
+// Status: Tested with terminal
+void RockBlock9603::dump_IMEI() {
+  uint64_t imei;
+  _at->send("AT+GSN");
+  _at->recv("AT+GSN");
+  _at->recv("%llu\r\n", &imei);
+  _at->recv("OK");
+  printf("IMEI = %llu\n", imei);
+}
+
+// Status: Tested with terminal
+uint64_t RockBlock9603::get_IMEI() {
+  uint64_t imei;
+  _at->send("AT+GSN");
+  _at->recv("AT+GSN");
+  _at->recv("%llu\r\n", &imei);
+  _at->recv("OK");
+  return imei;
+}
+
+// Status: Ready for testing
+int RockBlock9603::get_last_signal_quality() {
+  int bars;
+  bool argFilled;
+  _at->send("AT+CSQF");
+  // Expected response has form: +CSQF:<rssi>
+  _at->recv("AT+CSQF");
+  argFilled = _at->recv("+CSQF:%d\r\n", &bars);
+  if (argFilled) {
+    if ((bars>=0) && (bars<=5))
+      return bars;
+    else
+      return -2; // error: bars has invalid value
+  } else
+    return -1; // error: no value for bars found
+}
+
+// Status: Ready for testing
+int RockBlock9603::get_new_signal_quality() {
+  int bars;
+  bool argFilled;
+  _at->send("AT+CSQ");
+  // Expected response has form: +CSQ:<rssi>
+  _at->recv("AT+CSQ");
+  argFilled = _at->recv("+CSQ:%d\r\n", &bars);
+  if (argFilled) {
+    if ((bars>=0) && (bars<=5))
+      return bars;
+    else
+      return -2; // error: bars has invalid value
+  } else
+    return -1; // error: no value for bars found
+}
+
+// Status:  Ready for testing
+BufferStatus RockBlock9603::get_buffer_status() {
+  BufferStatus bs;
+  _at->send("AT+SBDSX");
+  _at->recv("AT+SBDSX");
+  _at->recv("+SBDSX: %d,%d,%d,%d,%d,%d\r\n", &bs.outgoingFlag, &bs.outgoingMsgNum,
+    &bs.incomingFlag, &bs.incomingMsgNum, &bs.raFlag, &bs.numMsgWaiting);
+  _at->recv("OK");
+  return bs;
 }
 
 // // Status: Lab tested with 9602-A
@@ -77,23 +217,7 @@ void RockBlock9603::echoModem(std::chrono::duration listenTime) {
 //     return -1;  // error: no value for sri found
 // }
 
-// // Status: Tested with terminal
-// int NAL9602::signalQuality() {
-//   int bars;
-//   bool argFilled;
 
-//   at.send("AT+CSQF");
-//   // Expected response has form: +CSQF:<rssi>
-//   at.recv("AT+CSQF");
-//   argFilled = at.recv("+CSQF:%d\r\n", &bars);
-//   if (argFilled) {
-//     if ((bars>=0) && (bars<=5))
-//       return bars;
-//     else
-//       return -2; // error: bars has invalid value
-//   } else
-//     return -1; // error: no value for bars found
-// }
 
 // // Status: Lab tested with 9602-A
 // void NAL9602::zeroMessageCounter() {
@@ -195,47 +319,6 @@ void RockBlock9603::echoModem(std::chrono::duration listenTime) {
 //   at.recv("OK");
 // }
 
-// // Status:  Lab tested with 9602-A
-// BufferStatus NAL9602::getBufferStatus() {
-//   BufferStatus bs;
-//   at.send("AT+SBDSX");
-//   at.recv("AT+SBDSX");
-//   at.recv("+SBDSX: %d,%d,%d,%d,%d,%d\r\n", &bs.outgoingFlag, &bs.outgoingMsgNum,
-//     &bs.incomingFlag, &bs.incomingMsgNum, &bs.raFlag, &bs.numMsgWaiting);
-//   at.recv("OK");
-//   return bs;
-// }
-
-// // Status: Ready for testing
-// void NAL9602::dumpManufacturer() {
-//   at.send("AT+GMI");
-//   echoModem(pc, 15);
-// }
-
-// // Status: Ready for testing
-// void NAL9602::dumpModel() {
-//   at.send("AT+GMM");
-//   echoModem(pc, 15);
-// }
-
-// // Status: Ready for testing
-// void NAL9602::dumpRevision() {
-//   at.send("AT+GMR");
-//   echoModem(pc, 15);
-// }
-
-// // Status: Ready for testing
-// void NAL9602::dumpIMEI() {
-//   at.send("AT+GSN");
-//   echoModem(pc, 15);
-// }
-
-// void NAL9602::gpsNoSleep() {
-//   at.send("AT^GAO1");
-//   at.recv("AT^GAO1");
-//   at.recv("OK");
-// }
-
 // // Status: Lab tested with 9602-A
 // void NAL9602::addMessageGPS() {
 //   sbdMessage.generateGPSBytes(coord);
@@ -290,27 +373,6 @@ void RockBlock9603::echoModem(std::chrono::duration listenTime) {
 //   }
 // }
 
-
-
-// void NAL9602::saveStartLog(int listenTime) {
-//   Timer t;
-//   startLogLength = 0;
-//   t.start();
-//   while (t<listenTime) {
-//     while ((modem.readable()) && (startLogLength < LOG_BUFF_LENGTH)) {
-//       modemStartLog[startLogLength] = at.getc();
-//       startLogLength++;
-//     }
-//   }
-// }
-
-// void NAL9602::echoStartLog(Serial &s) {
-//   for (unsigned int i = 0; i < startLogLength; i++) {
-//     s.putc(modemStartLog[i]);
-//   }
-//   if (startLogLength == LOG_BUFF_LENGTH)
-//     s.printf("\r\nStart output exceeded %d character buffer\r\n", LOG_BUFF_LENGTH);
-// }
 
 // void NAL9602::_oob_invalid_fix() {
 //   coord.positionFix = false;

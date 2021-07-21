@@ -67,7 +67,40 @@ public:
   /** Listen to 9603
   * Forward output of 9603 char-by-char to console
   */
-  void echoModem(std::chrono::duration listenTime = 3s);
+  void echo_until_timeout(milliseconds listenTime = 3s);
+  void echo_until_OK();
+
+  /** Get device info
+   */
+  void dump_manufacturer();
+  void dump_model();
+  void dump_revision();
+  void dump_IMEI();
+  uint64_t get_IMEI();
+
+  /** Turn on Iridium transceiver
+  */
+  void radio_on();
+
+  /** Turn off Iridium transceiver
+  */
+  void radio_off();
+
+  /** Report last known signal quality
+  *
+  * @returns number of signal "bars" (0 to 5)
+  */
+  int get_last_signal_quality();
+
+    /** Report current signal quality
+  *
+  * @returns number of signal "bars" (0 to 5)
+  */
+  int get_new_signal_quality();
+
+  /** Get status of outgoing and incoming buffers
+  */
+  BufferStatus get_buffer_status();
 
   // /** Check for incoming message
   // *
@@ -75,29 +108,12 @@ public:
   // */
   // int checkRingAlert();
 
-  // /** Report last known signal quality
-  // *
-  // * @returns number of signal "bars" (0 to 5)
-  // */
-  // int signalQuality();
-
-
- 
-
-  // void dumpManufacturer();
-  // void dumpModel();
-  // void dumpRevision();
-  // void dumpIMEI();
-
   // /** Reset outgoing message counter
   // *
   // * Sets the MOMSN (mobile originated message sequence number)
   // * to zero.
   // */
   // void zeroMessageCounter();
-
-
-
 
   // /** Listen to 9602-LP
   // * Save output of 9602 to buffer
@@ -122,9 +138,7 @@ public:
   // */
   // void clearBuffer(int selectedBuffer);
 
-  // /** Get status of outgoing and incoming buffers
-  // */
-  // BufferStatus getBufferStatus();
+
 
   // /** Add GPS bytes to SBD message
   // */
