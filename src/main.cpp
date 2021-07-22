@@ -25,6 +25,7 @@ int main() {
   ThisThread::sleep_for(100ms);
   trial_addr = generate_trial_address();
   char data_byte = 0x1B;
+
   printf("Attempting to write %#02x to address %04x\n", data_byte, trial_addr);
   code = fram.write(trial_addr, data_byte);
   printf("Response code is %d\n\n", code);
@@ -89,6 +90,35 @@ int main() {
     printf("Retrieved data is %i\n", int16_response.data);
   printf("\n");
 
+//multibyte write test
+  static const int array_length = 5;
+  char D[array_length];
+  char byte = 10;
+  for(int i = 0; i < array_length; i++)
+  {
+    D[i] = byte;
+    byte += 1; 
+  }
+
+   printf("The array values are: ");
+  for (int i = 0; i < sizeof(D); i++) {
+    printf(" %u", D[i]);
+  }
+  printf("\n");
+
+  printf("Attempting to write data from D to address %04x\n", trial_addr);
+  code = fram.write(trial_addr, D, sizeof(D));
+  printf("Response code is %d\n\n", code);
+
+  char data_array[array_length] = {0};
+  printf("attempting to read data from address %04x\n", trial_addr);
+  code = fram.read(trial_addr, data_array, array_length);
+  printf("Response code is %d\n\n", code);
+  printf("The returned values are: ");
+  for (int i = 0; i < sizeof(data_array); i++) {
+    printf(" %u", data_array[i]);
+  }
+  printf("\n");
   while (true) {
     led1 = !led1;
     ThisThread::sleep_for(2s);

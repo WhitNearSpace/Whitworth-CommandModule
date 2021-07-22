@@ -79,6 +79,30 @@ int Cypress_FRAM::write_int16(uint16_t mem_addr, int16_t data) //rights int16 to
 
 }
 
+int Cypress_FRAM::write(uint16_t mem_addr, const char* data, int length) //multi byte write of specified length to selected address
+{
+  char payload[length + 2];
+  int mb_ack; // multi-byte ack is different than single byte ack coding
+  int status = 0;
+  if (mem_addr <= maxAddress) { // Valid memory address
+    payload[0] = mem_addr >> 8; // MSB byte of memory address
+    payload[1] = mem_addr & 0x00FF; // LSB byte of memory address
+    for(int i = 0; i < length; i++){ //put data into payload
+      payload[i+2] = data[i];
+    }
+    mb_ack = _i2c->write(_addr, payload, length + 2);
+  } else {
+    mb_ack = 3;
+  }
+  switch (mb_ack) {
+    case 0: status = FRAM_SUCCESS; break;
+    case 1: status = FRAM_ERROR_NO_SLAVE; break;
+    case 2: status = FRAM_ERROR_BUS_BUSY; break;
+    case 3: status = FRAM_ERROR_INVALID_MEMORY_ADDRESS; break;
+  }
+  return status;
+}
+
 FRAM_Response_Read_Byte Cypress_FRAM::read(uint16_t mem_addr) //reads single byte from selected address
 {
   int ack;
@@ -229,4 +253,45 @@ FRAM_Response_Read_Int16 Cypress_FRAM::read_int16(int16_t mem_addr) //reads int_
     case 3: response.status = FRAM_ERROR_INVALID_MEMORY_ADDRESS; break;
   }
   return response;
+}
+
+int Cypress_FRAM::read(uint16_t mem_addr, char* data, int length) //multibyte read
+{
+   int ack, my_ack;
+  if (mem_addr > maxAddress) {  // Invalid memory address
+    ack = 3;
+  } else { // Perform PARTIAL write to set memory location (no data, no stop)
+    _i2c->start();
+    ack = _i2c->write(_addr); // send slave address (in write mode)
+  }
+  if (ack == 1) { // success so continue
+    ack = _i2c->write(mem_addr >> 8); // send MSB byte of memory address
+  }
+  if (ack == 1) { // success so continue
+    ack = _i2c->write(mem_addr & 0x00FF); // send LSB byte of memory address
+  }
+
+  if (ack == 1) { // success so continue
+    _i2c->start(); // abort write by sending START, leaving memory at current loc
+    ack = _i2c->write(_addr | 1); // send slave address (in read mode)
+  }
+  if (ack == 1) { // success so continue
+    for(int i =0; i < length; i++){
+      if (i == length-1) {
+        my_ack = 0; // no acknowledge so end of read
+      } else {
+        my_ack = 1; //acknowledge so keep going
+      }
+      data[i] = _i2c->read(my_ack); 
+    }
+  }  
+  _i2c->stop(); // send stop signal
+  int status;
+  switch (ack) {
+    case 0: status = FRAM_ERROR_NO_SLAVE; break;
+    case 1: status = FRAM_SUCCESS; break;
+    case 2: status = FRAM_ERROR_BUS_BUSY; break;
+    case 3: status = FRAM_ERROR_INVALID_MEMORY_ADDRESS; break;
+  }
+  return status;
 }
