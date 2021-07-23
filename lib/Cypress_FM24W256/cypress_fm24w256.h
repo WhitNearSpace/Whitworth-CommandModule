@@ -59,7 +59,7 @@ public:
   FRAM_Response_Read_Int16 read_int16(int16_t mem_addr);
   FRAM_Response_Read_Int16 read_int16();
   int read(uint16_t mem_addr, char* data, int length);
-  // int read(char* data, int length);
+  int read(char* data, int length);
 
 private:
   I2C* _i2c;  // Shared connection to I2C

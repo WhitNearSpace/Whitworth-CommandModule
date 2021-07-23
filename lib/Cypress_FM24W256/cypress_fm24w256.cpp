@@ -319,3 +319,29 @@ int Cypress_FRAM::read(uint16_t mem_addr, char* data, int length) //multibyte re
   }
   return status;
 }
+
+int Cypress_FRAM::read(char* data, int length) 
+{
+  int ack, my_ack;
+  _i2c->start();
+  ack = _i2c->write(_addr | 1); // bit 0 = high --> read operation
+  if(ack == 1){
+    for(int i =0; i < length; i++){
+        if (i == length-1) {
+          my_ack = 0; // no acknowledge so end of read
+        } else {
+          my_ack = 1; //acknowledge so keep going
+        }
+        data[i] = _i2c->read(my_ack); 
+      }
+  }
+  _i2c->stop();
+  int status;
+  switch (ack) {
+  case 0: status = FRAM_ERROR_NO_SLAVE; break;
+  case 1: status = FRAM_SUCCESS; break;
+  case 2: status = FRAM_ERROR_BUS_BUSY; break;
+  case 3: status = FRAM_ERROR_INVALID_MEMORY_ADDRESS; break;
+  }
+  return status;
+}

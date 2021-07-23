@@ -66,12 +66,38 @@ void test_write_int16_to_address()
   TEST_ASSERT_EQUAL_INT16(data_, response.data); //testing if read is the correct data value
 }
 
+void test_write_multibyte_to_address()
+{
+  uint16_t trial_addr;
+  static const int array_length = 5;
+  char D[array_length];
+  char byte = 10;
+  int code;
+
+  trial_addr = generate_trial_address();
+
+  for(int i = 0; i < array_length; i++)
+  {
+    D[i] = byte;
+    byte += 1; 
+  }
+
+  code = fram.write(trial_addr, D, sizeof(D));
+
+  TEST_ASSERT_EQUAL(FRAM_SUCCESS, code);
+  char data_array[array_length] = {0};
+  code = fram.read(trial_addr, data_array, array_length);
+  TEST_ASSERT_EQUAL(FRAM_SUCCESS, code);
+  TEST_ASSERT_EQUAL_INT8_ARRAY(D, data_array, 5);
+}
+
 int main() {
   ThisThread::sleep_for(3s);
   UNITY_BEGIN();
   RUN_TEST(test_write_byte_to_address);
   RUN_TEST(test_write_uint16_to_address);
   RUN_TEST(test_write_int16_to_address);
+  RUN_TEST(test_write_multibyte_to_address);
   UNITY_END();
   ThisThread::sleep_for(3s); 
 }

@@ -105,9 +105,9 @@ int main() {
 
 //multibyte write test
   static const int array_length = 5;
-  char D[array_length];
+  char D[10];
   char byte = 10;
-  for(int i = 0; i < array_length; i++)
+  for(int i = 0; i < 10; i++)
   {
     D[i] = byte;
     byte += 1; 
@@ -132,6 +132,16 @@ int main() {
     printf(" %u", data_array[i]);
   }
   printf("\n");
+
+  printf("attempting to read data from next address\n");
+  code = fram.read(data_array, array_length);
+  printf("Response code is %d\n\n", code);
+  printf("The returned values are: ");
+  for (int i = 0; i < sizeof(data_array); i++) {
+    printf(" %u", data_array[i]);
+  }
+  printf("\n");
+
   while (true) {
     led1 = !led1;
     ThisThread::sleep_for(2s);
