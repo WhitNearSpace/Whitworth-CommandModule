@@ -255,6 +255,30 @@ FRAM_Response_Read_Int16 Cypress_FRAM::read_int16(int16_t mem_addr) //reads int_
   return response;
 }
 
+FRAM_Response_Read_Int16 Cypress_FRAM::read_int16() //reads int16 from current adress
+{
+  int ack = 0;
+  int16_t byte1,byte2;
+  FRAM_Response_Read_Int16 response;
+    _i2c->start();
+    ack = _i2c->write(_addr | 1); // bit 0 = high --> read operation
+    if(ack == 1)
+      byte1 = _i2c->read(1); //acknowledge means keep reading
+    if(ack == 1) 
+    { 
+      byte2 = _i2c->read(0); // no acknowledge means end of read
+      response.data = (byte1 << 8) | byte2;
+    }
+    _i2c->stop();
+    switch (ack) {
+    case 0: response.status = FRAM_ERROR_NO_SLAVE; break;
+    case 1: response.status = FRAM_SUCCESS; break;
+    case 2: response.status = FRAM_ERROR_BUS_BUSY; break;
+    case 3: response.status = FRAM_ERROR_INVALID_MEMORY_ADDRESS; break;
+  }
+    return response;
+}
+
 int Cypress_FRAM::read(uint16_t mem_addr, char* data, int length) //multibyte read
 {
    int ack, my_ack;

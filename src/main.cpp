@@ -82,12 +82,25 @@ int main() {
   code = fram.write_int16(trial_addr, int16_data);
   printf("Response code is %d\n\n", code);
 
+ int16_data = -473;
+  printf("Attempting to write %i to address %04x\n", int16_data, trial_addr+2);
+  code = fram.write_int16(trial_addr+2, int16_data);
+  printf("Response code is %d\n\n", code);
+
 //int16 read test
   printf("Attempting to read from address %04x\n", trial_addr);
   int16_response = fram.read_int16(trial_addr);
   printf("Response code is %d\n", int16_response.status);
   if (int16_response.status == FRAM_SUCCESS)
     printf("Retrieved data is %i\n", int16_response.data);
+  printf("\n");
+
+//int16 current address read
+  printf("Attempting to read from next address\n");
+  int16_response = fram.read_int16();
+  printf("Response code is %d\n", int16_response.status);
+  if (int16_response.status == FRAM_SUCCESS)
+    printf("Retrieved data is %d\n", int16_response.data);
   printf("\n");
 
 //multibyte write test
