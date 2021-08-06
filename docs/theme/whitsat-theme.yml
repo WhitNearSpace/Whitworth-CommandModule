@@ -1,0 +1,70 @@
+extends: default
+page:
+    size: Letter
+role:
+  whitworth-red:
+    font-color: C22033
+  whitworth-gold:
+    font-color: C7B683
+  whitworth-bluegreen:
+    font-color: 007C89
+  whitworth-pale-bluegreen:
+    font-color: 67BAAF
+  warning:
+    font-color: D51019
+    text-transform: uppercase
+  caution:
+    font-color: FF7700
+  wild:
+    font-color: 222222
+    text-transform: uppercase
+    font-style: italic
+    background-color: BCD637
+    border-offset: 1.5
+header:
+  font_color: 333333
+  font-style: normal
+  height: 0.5in
+  recto:
+    columns: "<80% >20%"
+    left:
+      content: '_{document-title}_'
+    right:
+      content: image:WhitSpaceExploration.png[pdfwidth=0.75in]
+  verso:
+    columns: "<20% >80%"
+    left:
+      content: $header_recto_right_content
+    right:
+      content: '{document-subtitle}'
+footer:
+  height: 0.45in
+  recto:
+    right:
+      content: '{section-or-chapter-title} | {page-number}'
+  verso:
+    left:
+      content: '{page-number} | {chapter-title}'
+title_page:
+  title:
+    font-color: 333333
+  subtitle:
+    font-color: C22033
+    font-style: normal
+link:
+  font-color: #007C89
+admonition:
+  icon:
+    warning:
+      stroke_color: D51019
+      name: fire
+    caution:
+      stroke_color: FF7700
+      name: exclamation-triangle
+    important:
+      stroke_color: C7B683
+      name: star
+    note:
+      stroke_color: 007C89
+    tip:
+      stroke_color: 67BAAF
