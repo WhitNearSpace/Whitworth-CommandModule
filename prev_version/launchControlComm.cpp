@@ -59,7 +59,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
 
   } else if (strcmp(cmd, "PODTIME?")==0) {
     podRadio.test_all_clocks();
-    wait(1);
+    ThisThread::sleep_for(1s);
     status = sendClockTestResultsToLaunchControl(s);
 
   // RADIO commands
@@ -95,7 +95,7 @@ int parseLaunchControlInput(Serial &s, NAL9602 &sat) {
     char podIndex = podRadio.pod_number_to_index(numOpt);
     if (podIndex < podRadio.registry_length()) {
       podRadio.request_data_by_index(podIndex);
-      wait(1);
+      ThisThread::sleep_for(1s);
       status = sendPodDataToLaunchControl(numOpt, s, sat);
     } else {
       status = -2;
@@ -284,16 +284,16 @@ int changeModeToPending(NAL9602 &sat) {
   sat.setModeGPS(pedestrian);
   printf("Broadcasting primed to launch\r\n");
   podRadio.broadcast_launch_primed(flight.transPeriod);
-  wait(1);
+  ThisThread::sleep_for(1s);
   printf("Turning on GPS\r\n");
   if (!sat.gpsStatus) {
     sat.gpsOn();  // Flight mode requires GPS
-    wait(1);
+    ThisThread::sleep_for(1s);
   }
   printf("Turning on Iridium\r\n");
   if (!sat.iridiumStatus) {
     sat.satLinkOn();  // Flight mode requires sat
-    wait(1);
+    ThisThread::sleep_for(1s);
   }
   bool fix;
   int fixSats = 0;
@@ -303,7 +303,7 @@ int changeModeToPending(NAL9602 &sat) {
     if (fix) fixSats = sat.getSatsUsed();
     if (fixSats<4) {
       printf(".");
-      wait(5);
+      ThisThread::sleep_for(5s);
     }
   }
   printf("found\r\n");

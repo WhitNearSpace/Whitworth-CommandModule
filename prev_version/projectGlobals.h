@@ -6,7 +6,6 @@
 #define CMD_MODULE_GLOBALS_H
 
 // Header files needed to define these variables
-#include "NAL9602.h"
 #include "RN41.h"
 #include "TMP36.h"
 #include "FlightParameters.h"
@@ -14,9 +13,10 @@
 #include <mbed.h>
 #include <rtos.h>
 
+// Obsolete, for Command Module version 1
+// #include "NAL9602.h"
+
 // LPC1768 connections
-extern Serial pc;
-extern NAL9602 sat;                  // NAL 9602 modem interface object
 extern RN41 bt;                      // Bluetooth connection via RN-41
 extern CM_to_FC podRadio;            // XBee connection to pods
 extern TMP36 intTempSensor;          // Internal temperature sensor
@@ -34,4 +34,6 @@ extern FlightParameters flight;  // needs to be global because used in ISR
 extern Timer timeSinceTrans;
 extern Timer checkTime;
 
+// Obsolete, for Command Module version 1
+// extern NAL9602 sat;                  // NAL 9602 modem interface object
 #endif

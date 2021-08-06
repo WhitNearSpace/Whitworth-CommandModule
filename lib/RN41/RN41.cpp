@@ -10,46 +10,51 @@
  *  - Flight tested
  */
 
-// Status: Ready for testing
-RN41::RN41(PinName tx_pin, PinName rx_pin) : modem(tx_pin, rx_pin) {
+// Status: Tested with terminal
+RN41::RN41(BufferedSerial* bt_serial_ptr) {
   // Set initial state of flags
   connected = false;
   shutdownRequest = false;
   cmdStep = 0;
   cmdReady = false;
 
-  // Set modem baud rate
-  modem.baud(115200);
+  // Set the baud rate to the default speed of the RN41 module
+  bt_serial_ptr->set_baud(115200);
+
+  // Make file-like connection to BufferedSerial object
+  modem = fdopen(bt_serial_ptr, "r+");
 }
 
-// Status: Ready for testing
+// Status: Tested with terminal
 RN41::~RN41(void) {
   // Is there anything to do?
 }
 
+// Status: Ready for testing
 void RN41::initiateShutdown() {
   shutdownRequest = true;
   connected = false;
   cmdReady = false;
   cmdStep = 0;
-  cmdSequencer.attach(callback(this, &RN41::queueCmd), 1.25);
+  cmdSequencer.attach(callback(this, &RN41::queueCmd), 1250ms);
 }
 
+// Status: Ready for testing
 void RN41::processShutdown() {
   if (cmdReady) {
     switch(cmdStep) {
       case 1:
-        modem.printf("$$$");
-        cmdSequencer.attach(callback(this, &RN41::queueCmd), 1.25);
+        fprintf(modem, "$$$");
+        cmdSequencer.attach(callback(this, &RN41::queueCmd), 1250ms);
         cmdReady = false;
         break;
       case 2:
-        modem.printf(" K,\r\n");
-        cmdSequencer.attach(callback(this, &RN41::queueCmd), 1.25);
+        fprintf(modem, " K,\r\n");
+        cmdSequencer.attach(callback(this, &RN41::queueCmd), 1250ms);
         cmdReady = false;
         break;
       case 3:
-        modem.printf("Z\r\n");
+        fprintf(modem, "Z\r\n");
         shutdownRequest = false;
         cmdReady = false;
         break;
@@ -57,6 +62,7 @@ void RN41::processShutdown() {
   }
 }
 
+// Status: Ready for testing
 void RN41::queueCmd() {
   cmdStep++;
   cmdReady = true;
