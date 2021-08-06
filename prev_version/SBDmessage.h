@@ -1,17 +1,17 @@
 /** Whitworth Near Space SBD Message object
  *
  *  @author John M. Larkin (jlarkin@whitworth.edu)
- *  @version 0.1
- *  @date 2017
+ *  @version 1.0
+ *  @date 2021
  *  @copyright MIT License
  */
 
- #ifndef SBDmessage_H
+#ifndef SBDmessage_H
 #define SBDmessage_H
 
+#include <mbed.h>
+#include "FlightParameters.h"
 #include "GPSCoordinates.h"
-#include "mbed.h"
-
 
 #define SBD_LENGTH 340
 #define POD_LENGTH 70
@@ -20,27 +20,34 @@
 class SBDmessage {
 
 public:
+  char podLengths[MAXPODS];
+  uint32_t msgLength;
+  uint32_t missionID;
+  bool doneLoading;
+  bool requestedPodData;
+  bool updatedGPS;
+  bool messageLoaded;
+  bool attemptingSend;
+  int selectedPod;
+  Timer timeSincePodRequest;
+  Timer timeSinceSbdRequest;
+  float sbdTransTimeout;
+  float sbdPodTimeout;
+
   /** Create an SBDmessage object
   */
   SBDmessage();
 
   ~SBDmessage();
 
-  /** Set mission ID
+  /** Sets mission ID portion of mission ID
   *
-  * @param missionID Mission ID number registered with server
-  *   Positive ID = moving. Negative ID = on ground (pre or post flight)
+  * Must set missionID member variable before use
+  * 
+  * @param flightMode Mission ID number registered with server is
+  *   positive if moving and negative if on the ground (pre or post flight)
   */
-  void setMissionID(int flightMode);
-
-
-  /** Get ith byte of SBD Message
-  *
-  * @param i Requested byte (0-339)
-  *
-  * @returns ith byte (unsigned char) of SBD message
-  */
-  char getByte(int i);
+  void setMissionID(uint32_t flightMode);
 
   /** Populate portion of SBD message devoted to GPS data
   *
@@ -82,37 +89,60 @@ public:
 
   void updateMsgLength();
 
-  int32_t retrieveInt32(int startIndex);
-  uint16_t retrieveUInt16(int startIndex);
-  int16_t retrieveInt16(int startIndex);
-
-
-
-public:
-  char podLengths[MAXPODS];
-  int msgLength;
-  int missionID;
-  bool doneLoading;
-  bool requestedPodData;
-  bool updatedGPS;
-  bool messageLoaded;
-  bool attemptingSend;
-  int selectedPod;
-  Timer timeSincePodRequest;
-  Timer timeSinceSbdRequest;
-  float sbdTransTimeout;
-  float sbdPodTimeout;
-
-
-
 private:
   char sbd[SBD_LENGTH];
   char podData[MAXPODS][POD_LENGTH];
   char checksum[2];
-  void storeInt32(int startIndex, int32_t data);
-  void storeUInt16(int startIndex, uint16_t data);
-  void storeInt16(int startIndex, int16_t data);
 
+  /** Get ith byte of SBD Message
+  *
+  * @param i Requested byte (0-339)
+  *
+  * @returns ith byte (unsigned char) of SBD message
+  */
+  char retrieve_byte(uint32_t i);
+
+  /** Retrieve a 16-bit signed integer from SBD message
+   * 
+   * @param startIndex Start index of data (0-338)
+   * 
+   * @returns 16-bit signed integer
+   */
+  int16_t retrieve_int16(uint32_t startIndex);
+
+  /** Retrieve a 16-bit unsigned integer from SBD message
+   * 
+   * @param startIndex Start index of data (0-338)
+   * 
+   * @returns 16-bit unsigned integer
+   */
+  uint16_t retrieve_uint16(uint32_t startIndex);
+
+  /** Retrieve a 32-bit signed integer from SBD message
+   * 
+   * @param startIndex Start index of data (0-336)
+   * 
+   * @returns 32-bit signed integer
+   */
+  int32_t retrieve_int32(int startIndex);
+  
+  /** Store a 16-bit signed integer to SBD message
+   * @param startIndex Starting address of byte (0-338)
+   * @param data The 16-bit signed integer to be stored
+   */
+  void store_int16(uint32_t startIndex, int16_t data);
+
+  /** Store a 16-bit unsigned integer to SBD message
+   * @param startIndex Starting address of byte (0-338)
+   * @param data The 16-bit unsigned integer to be stored
+   */
+  void store_uint16(uint32_t startIndex, uint16_t data);
+
+  /** Store a 32-bit signed integer to SBD message
+   * @param startIndex Starting address of byte (0-336)
+   * @param data The 32-bit signed integer to be stored
+   */
+  void store_int32(uint32_t startIndex, int32_t data);
 };
 
 #endif

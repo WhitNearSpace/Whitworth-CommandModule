@@ -18,22 +18,87 @@ void SBDmessage::clearMessage() {
     sbd[i] = 0;
 }
 
-// Status: Flight tested
-void SBDmessage::setMissionID(int flightMode) {
-  if (flightMode==2) {
-    storeInt16(0, missionID);
+// Status: Ready for testing
+void SBDmessage::setMissionID(uint32_t flightMode) {
+  if (flightMode==FLIGHT_MODE_FLIGHT) {
+    store_int16(0, missionID);
   } else {
-    storeInt16(0, -missionID);
+    store_int16(0, -missionID);
   }
 }
 
-// Status: Flight tested
-char SBDmessage::getByte(int i) {
-  char val;
-  if ((i>=0)&&(i<SBD_LENGTH))
+// Status: Ready for testing
+char SBDmessage::retrieve_byte(uint32_t i) {
+  char val = 0;
+  if (i<SBD_LENGTH)
     val = sbd[i];
-  else val = 0;
+  else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for retrieve_byte function must be between 0 and 339");
   return val;
+}
+
+// Status: Ready for testing
+int16_t SBDmessage::retrieve_int16(uint32_t startIndex) {
+  int16_t result = 0;
+  if (startIndex < SBD_LENGTH-1) {
+    result |= sbd[startIndex]<<8;
+    result |= sbd[startIndex+1];
+  } else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for retrieve_int16 function must be between 0 and 338");
+  return result;
+}
+
+// Status: Ready for testing
+uint16_t SBDmessage::retrieve_uint16(uint32_t startIndex) {
+  uint16_t result = 0;
+  if (startIndex < SBD_LENGTH-1) {
+    result |= sbd[startIndex]<<8;
+    result |= sbd[startIndex+1];
+  } else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for retrieve_uint16 function must be between 0 and 338");
+  return result;
+}
+
+// Status: Ready for testing
+int32_t SBDmessage::retrieve_int32(uint32_t startIndex) {
+  int32_t result = 0;
+  if (startIndex < SBD_LENGTH-3) {
+    result |= sbd[startIndex]<<24;
+    result |= sbd[startIndex+1]<<16;
+    result |= sbd[startIndex+2]<<8;
+    result |= sbd[startIndex+3];
+  } else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for retrieve_int32 function must be between 0 and 336");
+  return result;
+}
+
+// Status: Ready for testing
+void SBDmessage::store_int16(uint32_t startIndex, int16_t data) {
+  if (startIndex < SBD_LENGTH-1) {
+    sbd[startIndex] = data >> 8;
+    sbd[startIndex+1] = data;
+  } else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for store_int16 function must be between 0 and 338");
+}
+
+// Status: Ready for testing
+void SBDmessage::store_uint16(uint32_t startIndex, uint16_t data) {
+  if (startIndex < SBD_LENGTH - 1) {
+    sbd[startIndex] = data >> 8;
+    sbd[startIndex+1] = data;
+  } else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for store_uint16 function must be between 0 and 338");
+}
+
+// Status: Ready for testing
+void SBDmessage::store_int32(uint32_t startIndex, int32_t data) {
+  if (startIndex < SBD_LENGTH - 3) {
+    sbd[startIndex] = data >> 24;
+    sbd[startIndex+1] = data >> 16;
+    sbd[startIndex+2] = data >> 8;
+    sbd[startIndex+3] = data;
+  } else
+    MBED_ERROR( MBED_MAKE_ERROR(MBED_MODULE_APPLICATION, MBED_ERROR_CODE_INVALID_INDEX), "SBD index for store_int32 function must be between 0 and 336");
 }
 
 // Status: Flight tested
@@ -51,22 +116,22 @@ void SBDmessage::generateGPSBytes(GPSCoordinates &gps) {
   sbd[2] = bitByte;
 
   // Time of GPS update is bytes 3-6
-  storeInt32(3, gps.syncTime);
+  store_int32(3, gps.syncTime);
 
   // Latitude (in 100,000th of a minute) is bytes 7-10
-  storeInt32(7, gps.getRawLatitude());
+  store_int32(7, gps.getRawLatitude());
 
   // Longitude (in 100,000th of a minute) is bytes 11-14
-  storeInt32(11, gps.getRawLongitude());
+  store_int32(11, gps.getRawLongitude());
 
   // Altitude (in meters) is bytes 15-16
-  storeUInt16(15, (uint16_t)(gps.getAltitude()));
+  store_uint16(15, (uint16_t)(gps.getAltitude()));
 
   // Vertical velocity (in tenths of m/s) is bytes 17-18
-  storeInt16(17, gps.getRawVerticalVelocity());
+  store_int16(17, gps.getRawVerticalVelocity());
 
   // Ground speed (in tenths of km/h) is bytes 19-20
-  storeUInt16(19, gps.getRawGroundSpeed());
+  store_uint16(19, gps.getRawGroundSpeed());
 
   // Heading relative to true north (0-180 deg, sign in bitByte)
   sbd[21] = (char)(heading);
@@ -78,11 +143,21 @@ void SBDmessage::generateCommandModuleBytes(float voltage, float intTemp, float 
   sbd[22] = (char)(voltage*20);
 
   // Store internal temperature in units of 0.01 deg C in bytes 23-24
-  storeInt16(23, (int16_t)(intTemp*100));
+  store_int16(23, (int16_t)(intTemp*100));
 
   // Store external temperature in units of 0.01 deg C in bytes 25-26
-  storeInt16(25, (int16_t)(extTemp*100));
+  store_int16(25, (int16_t)(extTemp*100));
 }
+
+void SBDmessage::updateMsgLength() {
+  msgLength = 27;
+  for (int i = 0; i < MAXPODS; i++) {
+    if (podLengths[i]>0)
+      msgLength = msgLength + podLengths[i] + 1;
+  }
+}
+
+/************** NEEDS UPDATING **********************/
 
 // Status: Flight tested
 unsigned short SBDmessage::generateChecksum() {
@@ -95,58 +170,7 @@ unsigned short SBDmessage::generateChecksum() {
   return cs;
 }
 
-void SBDmessage::storeInt32(int startIndex, int32_t data) {
-  sbd[startIndex] = data >> 24;
-  sbd[startIndex+1] = data >> 16;
-  sbd[startIndex+2] = data >> 8;
-  sbd[startIndex+3] = data;
-}
 
-// Status: Tested with terminal
-void SBDmessage::storeInt16(int startIndex, int16_t data) {
-  sbd[startIndex] = data >> 8;
-  sbd[startIndex+1] = data;
-}
-
-// Status: Tested with terminal
-void SBDmessage::storeUInt16(int startIndex, uint16_t data) {
-  sbd[startIndex] = data >> 8;
-  sbd[startIndex+1] = data;
-}
-
-// Status: Tested with terminal
-int32_t SBDmessage::retrieveInt32(int startIndex) {
-  int32_t result = 0;
-  result |= sbd[startIndex]<<24;
-  result |= sbd[startIndex+1]<<16;
-  result |= sbd[startIndex+2]<<8;
-  result |= sbd[startIndex+3];
-  return result;
-}
-
-// Status: Tested with terminal
-uint16_t SBDmessage::retrieveUInt16(int startIndex) {
-  uint16_t result = 0;
-  result |= sbd[startIndex]<<8;
-  result |= sbd[startIndex+1];
-  return result;
-}
-
-// Status: Tested with terminal
-int16_t SBDmessage::retrieveInt16(int startIndex) {
-  int16_t result = 0;
-  result |= sbd[startIndex]<<8;
-  result |= sbd[startIndex+1];
-  return result;
-}
-
-void SBDmessage::updateMsgLength() {
-  msgLength = 27;
-  for (int i = 0; i < MAXPODS; i++) {
-    if (podLengths[i]>0)
-      msgLength = msgLength + podLengths[i] + 1;
-  }
-}
 
 // Status: Ready for testing
 int SBDmessage::loadPodBuffer(int podID, char* data) {

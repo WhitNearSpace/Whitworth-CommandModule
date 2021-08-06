@@ -1,0 +1,54 @@
+== Iridium Short Burst Data
+
+[cols="1,3,1"]
+|===
+|Bytes |Description |Type
+
+| 0-1
+| Mission ID (positive = in-flight, negative = pre- or post-flight)
+| `int16`
+
+| 2
+| Bits: 0 = GPS fix, 1 = heading sign, 2-7 = pod active
+| --
+
+| 3-6
+| Time of GPS update (Unix time?)
+| `int32`
+
+| 7-10
+| Latitude (in 100,000th of a minute)
+| `int32`
+
+| 11-14
+| Longitude (in 100,000th of a minute)
+| `int32`
+
+| 15-16
+| Altitude (in meters)
+| `uint16`
+
+| 17-18
+| Vertical velocity (in tenths of m/s)
+| `int16`
+
+| 19-20
+| Ground speed (in tenths of km/h)
+| `uint16`
+
+| 21
+| Heading relative to true north (0-180 deg, sign in bit byte)
+| `uint8`
+
+| 22
+| Command module battery voltage (in units of 0.05 V)
+| `uint8`
+
+| 23-24
+| Internal temperature (in units of 0.01 deg C)
+| `int16`
+
+| 25-26
+| External temperature (in units of 0.01 deg C)
+| `int16`
+|===

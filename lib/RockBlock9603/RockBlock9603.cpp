@@ -196,69 +196,9 @@ BufferStatus RockBlock9603::get_buffer_status() {
   return bs;
 }
 
-// // Status: Lab tested with 9602-A
-// int NAL9602::checkRingAlert(void) {
-//   int sri;
-//   bool argFilled;
-
-//   at.send("AT+CRIS");
-//   // Expected response has the form +CRIS:<tri>,<sri>
-//   // tri is not defined for 9602
-//   at.recv("AT+CRIS");
-//   argFilled = at.recv("+CRIS: %*d,%d\r\n", &sri);
-
-//   if (argFilled) {
-//     if ( (sri==0) || (sri==1) ) {
-//       ringAlert = (sri==1);
-//       return sri;
-//     } else
-//       return -2; // error: sri has invalid value
-//   } else
-//     return -1;  // error: no value for sri found
-// }
 
 
 
-// // Status: Lab tested with 9602-A
-// void NAL9602::zeroMessageCounter() {
-//   at.send("AT+SBDC");
-//   at.recv("OK");
-// }
-
-// // Status: Ready for testing
-// int NAL9602::transmitMessageWithRingAlert() {
-//   int outgoingStatus;
-//   int outgoingMessageCount;
-//   int incomingStatus;
-//   int incomingMessageCount;
-//   int incomingLength;
-//   int queueLength;
-//   // if ((RI==1)||ringAlert) {
-//   //   modem.printf("AT+PSIXA\r");
-//   //   modem.scanf(" AT+PSIXA");
-//   // } else {
-//   at.send("AT+PSIX");
-//   at.recv("AT+PSIX");
-//   // }
-//   at.recv("+SBDIX:%d,%d,%d,%d,%d,%d\r\n", &outgoingStatus,
-//     &outgoingMessageCount, &incomingStatus, &incomingMessageCount,
-//     &incomingLength, &queueLength);
-//   if (incomingStatus == 1) {
-//     messageAvailable = true;
-//     incomingMessageLength = incomingLength;
-//   }
-//   if (queueLength == 0)
-//     ringAlert = false;
-//   at.recv("OK");
-//   switch(outgoingStatus) {
-//     case 0:
-//       pc.printf("MO message transferred successfully\r\n");
-//       break;
-//     default:
-//       pc.printf("Outgoing status code: %i\r\n", outgoingStatus);
-//   }
-//   return outgoingStatus;
-// }
 
 // // Status: Ready for testing
 // int NAL9602::transmitMessage() {
@@ -296,22 +236,7 @@ BufferStatus RockBlock9603::get_buffer_status() {
 //   return outgoingStatus;
 // }
 
-// // Status: Needs testing
-// NetworkRegistration NAL9602::joinNetwork() {
-//   char s[80];
-//   NetworkRegistration reg;
-//   at.send("AT+PSREG");
-//   at.recv("AT+PSREG");
-//   at.recv("%79s\r\n", s);
-//   if (strcmp(s,"No")==0) { // No GPS fix
-//     reg.status = -1;
-//     reg.err = -1;
-//   } else {
-//     at.recv(" +SBDREG:%i,%i\r\n", &reg.status, &reg.err);
-//   }
-//   at.recv("OK");
-//   return reg;
-// }
+
 
 // // Status: Ready for testing
 // void NAL9602::clearBuffer(int selectedBuffer) {
@@ -376,4 +301,83 @@ BufferStatus RockBlock9603::get_buffer_status() {
 
 // void NAL9602::_oob_invalid_fix() {
 //   coord.positionFix = false;
+// }
+
+// // Status: Lab tested with 9602-A
+// int NAL9602::checkRingAlert(void) {
+//   int sri;
+//   bool argFilled;
+
+//   at.send("AT+CRIS");
+//   // Expected response has the form +CRIS:<tri>,<sri>
+//   // tri is not defined for 9602
+//   at.recv("AT+CRIS");
+//   argFilled = at.recv("+CRIS: %*d,%d\r\n", &sri);
+
+//   if (argFilled) {
+//     if ( (sri==0) || (sri==1) ) {
+//       ringAlert = (sri==1);
+//       return sri;
+//     } else
+//       return -2; // error: sri has invalid value
+//   } else
+//     return -1;  // error: no value for sri found
+// }
+
+// // Status: Lab tested with 9602-A
+// void NAL9602::zeroMessageCounter() {
+//   at.send("AT+SBDC");
+//   at.recv("OK");
+// }
+
+// // Status: Ready for testing
+// int NAL9602::transmitMessageWithRingAlert() {
+//   int outgoingStatus;
+//   int outgoingMessageCount;
+//   int incomingStatus;
+//   int incomingMessageCount;
+//   int incomingLength;
+//   int queueLength;
+//   // if ((RI==1)||ringAlert) {
+//   //   modem.printf("AT+PSIXA\r");
+//   //   modem.scanf(" AT+PSIXA");
+//   // } else {
+//   at.send("AT+PSIX");
+//   at.recv("AT+PSIX");
+//   // }
+//   at.recv("+SBDIX:%d,%d,%d,%d,%d,%d\r\n", &outgoingStatus,
+//     &outgoingMessageCount, &incomingStatus, &incomingMessageCount,
+//     &incomingLength, &queueLength);
+//   if (incomingStatus == 1) {
+//     messageAvailable = true;
+//     incomingMessageLength = incomingLength;
+//   }
+//   if (queueLength == 0)
+//     ringAlert = false;
+//   at.recv("OK");
+//   switch(outgoingStatus) {
+//     case 0:
+//       pc.printf("MO message transferred successfully\r\n");
+//       break;
+//     default:
+//       pc.printf("Outgoing status code: %i\r\n", outgoingStatus);
+//   }
+//   return outgoingStatus;
+// }
+
+// // Status: Needs testing
+// NetworkRegistration NAL9602::joinNetwork() {
+//   char s[80];
+//   NetworkRegistration reg;
+//   at.send("AT+PSREG");
+//   at.recv("AT+PSREG");
+//   at.recv("%79s\r\n", s);
+//   if (strcmp(s,"No")==0) { // No GPS fix
+//     reg.status = -1;
+//     reg.err = -1;
+//   } else {
+//     at.recv(" +SBDREG:%i,%i\r\n", &reg.status, &reg.err);
+//   }
+//   at.recv("OK");
+//   return reg;
 // }

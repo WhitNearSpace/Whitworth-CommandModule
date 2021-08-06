@@ -1,0 +1,66 @@
+= High Altitude Balloon Command Module Software: WhitSat TR-002
+John M. Larkin <jlarkin@whitworth.edu>
+v2.0, {docdate}
+:description: The High Altitude Balloon Open Source Collection (HABOSC) is a set of interrelated tools for transmitting telemetry from a high altitude balloon, processing and storing that data, and providing user access to the stored data both during and after the flight.  The system is designed to be flexible so it can adapt to the needs of various users.
+// Settings:
+:doctype: book
+:experimental:
+:reproducible:
+:toc:
+:chapter-label:
+:figure-caption: Figure
+:xrefstyle: short
+:imagesdir: {docdir}/images
+:listing-caption: Listing
+:source-highlighter: rouge
+:rouge-style: github
+:source-language: asciidoc
+:stem: latexmath
+:eqnums:
+ifndef::env-github[]
+:icons: font
+:icon-set: far
+endif::[]
+ifdef::backend-pdf[]
+:pdf-theme: whitsat
+:pdf-themesdir: {docdir}/theme
+:title-logo-image: image:{pdf-themesdir}/whitsat-technical-report-banner.png[pdfwidth=5.25in,align=right]
+endif::[]
+// URIs:
+:uri-asciidoc-doc: https://docs.asciidoctor.org/asciidoc/latest/
+:uri-asciidoctor-doc: https://docs.asciidoctor.org/asciidoctor/latest/
+:uri-callouts-doc: https://docs.asciidoctor.org/asciidoc/latest/verbatim/callouts/
+:callout1: \\ <1>
+:gt: >
+
+[abstract]
+== Summary
+[.lead]
+_{description}_
+
+The components of the collection are:
+
+Command Module (hardware)::
+This is the essential hardware system carried by the balloon.  The core tracking features are implemented using a GPS receiver and an Iridium satellite modem.
+The operations of the Command Module are coordinated by a microcontroller (in the ARM Cortex-M family).  Bluetooth communication allows a local computer using Mission Control (described below) to configure the Command Module for the flight.
+Communication with experiment pods containing a Flight Computer (see below) is possible through a XBee 802.15.4 radio network operating at 2.4 GHz.
+
+Command Module (microcontroller software)::
+Written in C++ using the ARM Mbed API and RTOS (real-time operating system), this is the code running on the microcontroller that ensures measurements are made and then transmitted to the Iridium satellite network.
+
+Mission Control (server software)::
+The Python code running on the server listens for telemetry packets relayed by the Iridium ground station.  The telemetry data is processed and stored in a MongoDB database.  Users interface with Mission Control through a web frontend based on HTML and Javascript.  Close to real-time mapping and graphical display of key telemetry is provided. Recent versions of several web browsers allow access to a local computer's serial ports, enabling Mission Control to use a computer's Bluetooth connection to send mission configuration details to the Command Module. This also allows authorized users to monitor communication between the Command Module and linked Flight Computers during the prototyping and debugging phase on the ground.
+
+Flight Computer (hardware)::
+This printed circuit board holds an Arm Cortex-M3 microcontroller.  The microcontroller supports reading sensors and logging data to the attached SD card.  An XBee radio modem allows the microcontroller to synchronize its real-time clock with the Command Module as well as to relay data to the Command Module for transmission to Mission Control. An integrated rechargeable battery provides a reliable power source.  A version of the Flight Computer also provides a base for attaching a breadboard if custom circuitry is required.
+
+Flight Computer (software library)::
+This Mbed-based library allows users to easily integrate communication with the Command Module into their C++ code.
+
+The remainder of this document describes the software portion of the Command Module.
+
+:sectnums:
+include::SBD_messages.adoc[]
+include::FRAM.adoc[]
+
+
