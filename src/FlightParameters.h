@@ -19,6 +19,11 @@
 #define PRE_TRANS_PERIOD 300
 #define POST_TRANS_PERIOD 600
 
+#define FLIGHT_MODE_LAB 0
+#define FLIGHT_MODE_LAUNCH 1
+#define FLIGHT_MODE_FLIGHT 2
+#define FLIGHT_MODE_LANDED 3
+
 struct FlightParameters {
   int mode;
   int transPeriod;

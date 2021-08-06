@@ -1,150 +1,25 @@
 #include <mbed.h>
-#include "cypress_fm24w256.h"
+#include "RockBlock9603.h"
 
 DigitalOut led1(LED1);
 
-I2C i2c(p9,p10);
-Cypress_FRAM fram(&i2c,0);
+RockBlock9603 sat(p9, p10, NC);
 
-uint16_t generate_trial_address() {
-  AnalogIn adc(p20); // Use unconnected analog in to generate some random bits
-  uint16_t trial_addr;
-  trial_addr = (adc.read_u16() >> 4) & 0x000F; // 1st hex digit (starting on right)
-  trial_addr = trial_addr | (((adc.read_u16() >> 4) & 0x000F) << 4); // 2nd hex digit
-  trial_addr = trial_addr | (((adc.read_u16() >> 4) & 0x000F) << 8); // 3rd hex digit
-  trial_addr = trial_addr | (((adc.read_u16() >> 4) & 0x0007) << 12); // 4th hex digit
-  return trial_addr;
-}
 
 int main() {
-  uint16_t trial_addr;
-  int code;
-  FRAM_Response_Read_Byte response;
-  FRAM_Response_Read_Uint16 uint16_response;
-  FRAM_Response_Read_Int16 int16_response;
-  ThisThread::sleep_for(100ms);
-  trial_addr = generate_trial_address();
-  char data_byte = 0x1B;
-
-  printf("Attempting to write %#02x to address %04x\n", data_byte, trial_addr);
-  code = fram.write(trial_addr, data_byte);
-  printf("Response code is %d\n\n", code);
-
-  data_byte = 0x3C; //next byte
-  printf("Attempting to write %#02x to next address\n", data_byte);
-  code = fram.write((trial_addr + 1), data_byte); //next byte write
-  printf("Response code is %d\n\n", code);
-
-  printf("Attempting to read from address %04x\n", trial_addr);
-  response = fram.read(trial_addr);
-  printf("Response code is %d\n", response.status);
-  if (response.status == FRAM_SUCCESS)
-    printf("Retrieved data is %#02x\n", response.data);
-  printf("\n");
-
-  printf("Attempting to read from next adress\n");
-  response = fram.read();
-  printf("Response code is %d\n", response.status);
-  if (response.status == FRAM_SUCCESS)
-    printf("Retrieved data is %#02x\n", response.data);
-  printf("\n");
-
-  //uint16t data write test
-  uint16_t uint16_data = 234;
-  printf("Attempting to write %u to address %04x\n", uint16_data, trial_addr);
-  code = fram.write_uint16(trial_addr, uint16_data);
-  printf("Response code is %d\n\n", code);
-
-  uint16_data = 10321;
-  code = fram.write_uint16(trial_addr + 2, uint16_data);
-
-
-
-//uint16 read test (specified address)
-  printf("Attempting to read from address %04x\n", trial_addr);
-  uint16_response = fram.read_uint16(trial_addr);
-  printf("Response code is %d\n", uint16_response.status);
-  if (uint16_response.status == FRAM_SUCCESS)
-    printf("Retrieved data is %u\n", uint16_response.data);
-  printf("\n");
-
-//uint16 read test (current address)
-  printf("Attempting to read from next address\n");
-  uint16_response = fram.read_uint16();
-  printf("Response code is %d\n", uint16_response.status);
-  if (uint16_response.status == FRAM_SUCCESS)
-    printf("Retrieved data is %u\n", uint16_response.data);
-  printf("\n");
-
-//int16 write test
-  int16_t int16_data= 565;
-  printf("Attempting to write %i to address %04x\n", int16_data, trial_addr);
-  code = fram.write_int16(trial_addr, int16_data);
-  printf("Response code is %d\n\n", code);
-
- int16_data = -473;
-  printf("Attempting to write %i to address %04x\n", int16_data, trial_addr+2);
-  code = fram.write_int16(trial_addr+2, int16_data);
-  printf("Response code is %d\n\n", code);
-
-//int16 read test
-  printf("Attempting to read from address %04x\n", trial_addr);
-  int16_response = fram.read_int16(trial_addr);
-  printf("Response code is %d\n", int16_response.status);
-  if (int16_response.status == FRAM_SUCCESS)
-    printf("Retrieved data is %i\n", int16_response.data);
-  printf("\n");
-
-//int16 current address read
-  printf("Attempting to read from next address\n");
-  int16_response = fram.read_int16();
-  printf("Response code is %d\n", int16_response.status);
-  if (int16_response.status == FRAM_SUCCESS)
-    printf("Retrieved data is %d\n", int16_response.data);
-  printf("\n");
-
-//multibyte write test
-  static const int array_length = 5;
-  char D[10];
-  char byte = 10;
-  for(int i = 0; i < 10; i++)
-  {
-    D[i] = byte;
-    byte += 1; 
-  }
-
-   printf("The array values are: ");
-  for (int i = 0; i < sizeof(D); i++) {
-    printf(" %u", D[i]);
-  }
-  printf("\n");
-
-  printf("Attempting to write data from D to address %04x\n", trial_addr);
-  code = fram.write(trial_addr, D, sizeof(D));
-  printf("Response code is %d\n\n", code);
-
-  char data_array[array_length] = {0};
-  printf("attempting to read data from address %04x\n", trial_addr);
-  code = fram.read(trial_addr, data_array, array_length);
-  printf("Response code is %d\n\n", code);
-  printf("The returned values are: ");
-  for (int i = 0; i < sizeof(data_array); i++) {
-    printf(" %u", data_array[i]);
-  }
-  printf("\n");
-
-  printf("attempting to read data from next address\n");
-  code = fram.read(data_array, array_length);
-  printf("Response code is %d\n\n", code);
-  printf("The returned values are: ");
-  for (int i = 0; i < sizeof(data_array); i++) {
-    printf(" %u", data_array[i]);
-  }
-  printf("\n");
-
+  uint64_t imei;
+  ThisThread::sleep_for(1s);
+  imei = sat.get_IMEI();
+  printf("IMEI = %llu\n", imei);
+  int bars = sat.get_new_signal_quality();
+  printf("bars = %d\n", bars);
+  BufferStatus bs = sat.get_buffer_status();
+  printf("Buffer status\n");
+  printf("\tMOMSN: %d\n", bs.outgoingMsgNum);
+  printf("\tMO flag: %d\n", bs.outgoingFlag);
   while (true) {
     led1 = !led1;
-    ThisThread::sleep_for(2s);
+    ThisThread::sleep_for(1s);
   }
 }
 
