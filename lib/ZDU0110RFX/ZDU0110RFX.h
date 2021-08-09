@@ -67,7 +67,7 @@ namespace Zilog {
   static const uint8_t INT_TX_EMPTY = 1 << 7;
   static const uint8_t INT_TX_WATERMARK = 1 << 6;
   static const uint8_t INT_TX_FULL = 1 << 5;
-  static const uint8_t INT_BREAK = 1 << 4;
+  static const uint8_t INT_INVALID = 1 << 4; // data sheet discrepancy, so maybe not correct
   static const uint8_t INT_RX_DATA = 1 << 3;
   static const uint8_t INT_RX_WATERMARK = 1 << 2;
   static const uint8_t INT_RX_FULL = 1 << 1;
@@ -117,6 +117,21 @@ public:
   uint8_t read_uart_status(int uart=0);
   void print_uart_status(int uart=0);
   Zilog::fifo_level get_buffer_level(int uart=0);
+
+  bool enable_interrupts(uint8_t interrupt_byte, int uart=0);
+  uint8_t get_interrupt_status(int uart=0);
+
+  bool set_tx_watermark(char num_bytes, int uart=0);
+  bool set_rx_watermark(char num_bytes, int uart=0);
+  char get_tx_watermark(int uart=0);
+  char get_rx_watermark(int uart=0);
+
+  bool config_data_bits(char num_bits, int uart=0);
+  bool config_parity(char parity, int uart=0);
+  bool config_stop_bits(char num_bits, int uart=0);
+  bool config_flow_control(char flow_ctrl_code, int uart=0);
+  bool reset_buffers(bool tx_reset, bool rx_reset, int uart=0);
+  bool reset_uart(int uart=0);
 
   // Variables
 

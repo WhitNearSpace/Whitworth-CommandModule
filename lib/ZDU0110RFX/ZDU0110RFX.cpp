@@ -50,22 +50,6 @@ int Zilog_SerialBridge::get_baud(int uart) {
   return baud;
 }
 
-fifo_level Zilog_SerialBridge::get_buffer_level(int uart) {
-  fifo_level lvl;
-  int nak;
-  char buff[2];
-  buff[0] = reg_for_uart(REG_READ_FIFO_LVL, uart);
-  _i2c->lock();
-  nak = _i2c->write(_addr, buff, 1, true);
-  if (!nak) nak = _i2c->read(_addr, buff, 2);
-  _i2c->unlock();
-  if (!nak) {
-    lvl.rx_bytes = buff[0];
-    lvl.tx_bytes = buff[1];
-  }
-  return lvl;
-}
-
 bool Zilog_SerialBridge::send(char* data, int len, int uart) {
   int ack;
   int i = 0;
@@ -111,8 +95,6 @@ int Zilog_SerialBridge::recv(char* data, int max_len, int uart) {
   return i;
 }
 
-
-
 uint8_t Zilog_SerialBridge::read_uart_status(int uart) {
   int nak;
   char buff;
@@ -137,7 +119,7 @@ void Zilog_SerialBridge::print_uart_status(int uart) {
     if (status == 0) printf("\tno flags set\n");
     if (status & UART_STATUS_TX_FULL) printf("\ttx buffer is full\n");
     if (status & UART_STATUS_TX_EMPTY) printf("\ttx buffer is empty\n");
-    if (status & UART_STATUS_RX_DATA) printf("\tdata available for rx\n");
+    if (status & UART_STATUS_RX_DATA) printf("\tdata available for rx\n"); // is data sheet wrong?
     if (status & UART_STATUS_BREAK) printf("\tbreak received\n");
     if (status & UART_STATUS_DATA_OVERRUN) printf("\tERROR: data over run\n");
     if (status & UART_STATUS_FRAME_ERROR) printf("\tERROR: frame error\n");
@@ -145,6 +127,214 @@ void Zilog_SerialBridge::print_uart_status(int uart) {
   }
   printf("\n");
 }
+
+fifo_level Zilog_SerialBridge::get_buffer_level(int uart) {
+  fifo_level lvl;
+  int nak;
+  char buff[2];
+  buff[0] = reg_for_uart(REG_READ_FIFO_LVL, uart);
+  _i2c->lock();
+  nak = _i2c->write(_addr, buff, 1, true);
+  if (!nak) nak = _i2c->read(_addr, buff, 2);
+  _i2c->unlock();
+  if (!nak) {
+    lvl.rx_bytes = buff[0];
+    lvl.tx_bytes = buff[1];
+  }
+  return lvl;
+}
+
+bool Zilog_SerialBridge::set_tx_watermark(char num_bytes, int uart) {
+  int nak;
+  char cmd[2];
+  if ((num_bytes>=1) && (num_bytes<=64)) {
+    cmd[0] = reg_for_uart(REG_WRITE_TX_WATERMARK, uart);
+    cmd[1] = num_bytes;
+    _i2c->lock();
+    nak = _i2c->write(_addr, cmd, 2);
+    _i2c->unlock();
+    return !nak;
+  } else {
+    return false;
+  }
+}
+
+bool Zilog_SerialBridge::set_rx_watermark(char num_bytes, int uart) {
+  int nak;
+  char cmd[2];
+  if ((num_bytes>=1) && (num_bytes<=64)) {
+    cmd[0] = reg_for_uart(REG_WRITE_RX_WATERMARK, uart);
+    cmd[1] = num_bytes;
+    _i2c->lock();
+    nak = _i2c->write(_addr, cmd, 2);
+    _i2c->unlock();
+    return !nak;
+  } else {
+    return false;
+  }
+}
+
+char Zilog_SerialBridge::get_tx_watermark(int uart) {
+  int nak;
+  char buff[1];
+  buff[0] = reg_for_uart(REG_READ_TX_WATERMARK, uart);
+  _i2c->lock();
+  nak = _i2c->write(_addr, buff, 1, true);
+  if (!nak) nak = _i2c->read(_addr, buff, 1);
+  _i2c->unlock();
+  if (!nak) {
+    return buff[0];
+  } else {
+    return 0;
+  }
+}
+
+char Zilog_SerialBridge::get_rx_watermark(int uart) {
+  int nak;
+  char buff[1];
+  buff[0] = reg_for_uart(REG_READ_RX_WATERMARK, uart);
+  _i2c->lock();
+  nak = _i2c->write(_addr, buff, 1, true);
+  if (!nak) nak = _i2c->read(_addr, buff, 1);
+  _i2c->unlock();
+  if (!nak) {
+    return buff[0];
+  } else {
+    return 0;
+  }
+}
+
+bool Zilog_SerialBridge::enable_interrupts(uint8_t interrupt_byte, int uart) {
+  int nak;
+  char cmd[2];
+  cmd[0] = reg_for_uart(REG_UART_INT_ENABLE, uart);
+  cmd[1] = interrupt_byte;
+  _i2c->lock();
+  nak = _i2c->write(_addr, cmd, 2);
+  _i2c->unlock();
+  return !nak;
+}
+
+uint8_t Zilog_SerialBridge::get_interrupt_status(int uart) {
+  int nak;
+  char buff[2];
+  uint8_t status_byte;
+  buff[0] = reg_for_uart(REG_UART_INT_STATUS, uart);
+  _i2c->lock();
+  nak = _i2c->write(_addr, buff, 1, true);
+  if (!nak) nak = _i2c->read(_addr, buff, 1);
+  _i2c->unlock();
+  if (!nak) {
+    status_byte = buff[0];
+  } else {
+    status_byte = INT_INVALID;
+  }
+  return status_byte;
+}
+
+bool Zilog_SerialBridge::config_data_bits(char num_bits, int uart) {
+  int nak;
+  char cmd[3];
+  if ((num_bits >= 5) && (num_bits <= 9)) {
+    cmd[0] = reg_for_uart(REG_WRITE_UART_CONFIG, uart);
+    cmd[1] = UART_CONFIG_SUB_DATA_BITS;
+    switch (num_bits) {
+      case 5: cmd[2] = UART_CONFIG_DATA_BITS_5; break;
+      case 6: cmd[2] = UART_CONFIG_DATA_BITS_6; break;
+      case 7: cmd[2] = UART_CONFIG_DATA_BITS_7; break;
+      case 8: cmd[2] = UART_CONFIG_DATA_BITS_8; break;
+      case 9: cmd[2] = UART_CONFIG_DATA_BITS_9; break;
+      default: cmd[2] = UART_CONFIG_DATA_BITS_8;
+    }
+    _i2c->lock();
+    nak = _i2c->write(_addr, cmd, 3);
+    _i2c->unlock();
+    return !nak;
+  } else {
+    return false;
+  }
+}
+
+bool Zilog_SerialBridge::config_parity(char parity, int uart) {
+  int nak;
+  char cmd[3];
+  if ((parity >= 0) && (parity <= 3)) {
+    cmd[0] = reg_for_uart(REG_WRITE_UART_CONFIG, uart);
+    cmd[1] = UART_CONFIG_SUB_PARITY;
+    switch (parity) {
+      case 0: cmd[2] = UART_CONFIG_PARITY_NONE; break;
+      case 1: cmd[2] = UART_CONFIG_PARITY_ODD; break;
+      case 2: cmd[2] = UART_CONFIG_PARITY_EVEN; break;
+      case 3: cmd[2] = UART_CONFIG_PARITY_ODD; break;
+      default: cmd[2] = UART_CONFIG_PARITY_NONE;
+    }
+    _i2c->lock();
+    nak = _i2c->write(_addr, cmd, 3);
+    _i2c->unlock();
+    return !nak;
+  } else {
+    return false;
+  }
+}
+
+bool Zilog_SerialBridge::config_stop_bits(char num_bits, int uart) {
+  int nak;
+  char cmd[3];
+  if ((num_bits == 1) || (num_bits==2)) {
+    cmd[0] = reg_for_uart(REG_WRITE_UART_CONFIG, uart);
+    cmd[1] = UART_CONFIG_SUB_STOP_BITS;
+    cmd[2] = num_bits - 1;
+    _i2c->lock();
+    nak = _i2c->write(_addr, cmd, 3);
+    _i2c->unlock();
+    return !nak;
+  } else {
+    return false;
+  }
+}
+
+bool Zilog_SerialBridge::config_flow_control(char flow_ctrl_code, int uart) {
+  int nak;
+  char cmd[3];
+  if ((flow_ctrl_code >= 0) && (flow_ctrl_code <= 2)) {
+    cmd[0] = reg_for_uart(REG_WRITE_UART_CONFIG, uart);
+    cmd[1] = UART_CONFIG_SUB_FLOW_CTRL;
+    cmd[2] = flow_ctrl_code;
+    _i2c->lock();
+    nak = _i2c->write(_addr, cmd, 3);
+    _i2c->unlock();
+    return !nak;
+  } else {
+    return false;
+  }
+}
+
+bool Zilog_SerialBridge::reset_buffers(bool tx_reset, bool rx_reset, int uart) {
+  int nak;
+  char cmd[3];
+  cmd[0] = reg_for_uart(REG_WRITE_UART_CONFIG, uart);
+  cmd[1] = UART_CONFIG_SUB_RESET_FIFOS;
+  cmd[2] = 0;
+  if (tx_reset) cmd[2] = cmd[2] + 1;
+  if (rx_reset) cmd[2] = cmd[2] + 2;
+  _i2c->lock();
+  nak = _i2c->write(_addr, cmd, 3);
+  _i2c->unlock();
+  return !nak;
+}
+
+bool Zilog_SerialBridge::reset_uart(int uart) {
+  int nak;
+  char cmd[2];
+  cmd[0] = reg_for_uart(REG_WRITE_UART_CONFIG, uart);
+  cmd[1] = UART_CONFIG_SUB_RESET;
+  _i2c->lock();
+  nak = _i2c->write(_addr, cmd, 2);
+  _i2c->unlock();
+  return !nak;
+}
+
+/***** PRIVATE METHODS *****/
 
 uint8_t Zilog_SerialBridge::reg_for_uart(uint8_t base_reg, int uart) {
   switch (uart) {
