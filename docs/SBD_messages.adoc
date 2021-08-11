@@ -51,4 +51,9 @@
 | 25-26
 | External temperature (in units of 0.01 deg C)
 | `int16`
+
+| 27footnote:[This byte was added to the command module section in version 2.]
+| Battery capacity (in units of 0.5%)
+| `uint8`
 |===
+

@@ -33,7 +33,11 @@ The format of that stored configuration is given in the following table.
 | Launch height (in meters)
 | `int16`
 
-| 10-1000
+| 7-9
+| Reserved for future use
+| not specified
+
+| 10-199
 | Pod manifest
 | see below
 |===
@@ -48,3 +52,64 @@ __Trigger height__ is the increase in altitude (in meters) above __launch height
 
 The pod manifest is a description of the individual experiment pod's and the data that they will be transmitting. This takes two forms. The primary version is based on nested Python lists and dictionaries. This verbose format is used in the Mission Control server and the underlying MongoDB database. The constraints of the microcontroller necessitate a more compact (and less human-friendly) format containing a subset of the information in the primary format.
 
+.Manifest format in FRAM
+[cols="1,3,1"]
+|===
+|Bytes |Description |Type
+
+| 10
+| Number of pods in this mission
+| `uint8`
+
+| 11-30
+| Flight computer ID for pod 1
+| `char[]`
+
+| 31
+| Number of data bytes from pod 1
+| `uint8`
+
+| 32-51
+| Flight computer ID for pod 2
+| `char[]`
+
+| 52
+| Number of data bytes from pod 2
+| `uint8`
+
+| 53-72
+| Flight computer ID for pod 3
+| `char[]`
+
+| 73
+| Number of data bytes from pod 3
+| `uint8`
+
+| 74-93
+| Flight computer ID for pod 4
+| `char[]`
+
+| 94
+| Number of data bytes from pod 4
+| `uint8`
+
+| 95-114
+| Flight computer ID for pod 5
+| `char[]`
+
+| 115
+| Number of data bytes from pod 5
+| `uint8`
+
+| 116-135
+| Flight computer ID for pod 6
+| `char[]`
+
+| 136
+| Number of data bytes from pod 6
+| `uint8`
+
+| 137-199
+| Reserved for future use
+| not specified
+|===
