@@ -180,6 +180,8 @@ int sendGPStoLaunchControl(Serial &s, NAL9602 &sat) {
 }
 
 // Status: Lab tested with 9602-A
+// Needs rewrite for version 2
+// INT_TEMP, EXT_TEMP, BATT_VOLT, BATT_CAP
 int sendCmdSensorsToLaunchControl(Serial &s, NAL9602 &sat) {
   int status = 0;
   s.printf("BAT=%.2f\r\n", getBatteryVoltage());
